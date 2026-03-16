@@ -21,59 +21,49 @@
         <button type="submit">Отправить в облако</button>
     </form>
 </div>
+
 <script type="module">
-  import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.0/firebase-app.js";
-  import { getFirestore, collection, addDoc } from "https://www.gstatic.com/firebasejs/10.7.0/firebase-firestore.js";
+    // Импортируем модули Firebase
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.0/firebase-app.js";
+    import { getFirestore, collection, addDoc } from "https://www.gstatic.com/firebasejs/10.7.0/firebase-firestore.js";
 
-  const firebaseConfig = {
-  apiKey: "AIzaSyBucYbom6btGkn1kBhV72RXAd7dGamxJq0",
-  authDomain: "ilham-d9438.firebaseapp.com",
-  projectId: "ilham-d9438",
-  storageBucket: "ilham-d9438.firebasestorage.app",
-  messagingSenderId: "498564012469",
-  appId: "1:498564012469:web:d3ace73422dac888b021fc",
-  measurementId: "G-PHBGQD3JJJ"
-};
+    // ТВОИ КЛЮЧИ
+    const firebaseConfig = {
+        apiKey: "AIzaSyCMU10sdX-NMzO1at3hgLclApVAgwqDu4E",
+        authDomain: "galushkodenis-7833b.firebaseapp.com",
+        projectId: "galushkodenis-7833b",
+        storageBucket: "galushkodenis-7833b.firebasestorage.app",
+        messagingSenderId: "176104150786",
+        appId: "1:176104150786:web:2d8044114a4fd4a9c0141b"
+    };
 
-  const app = initializeApp(firebaseConfig);
-  const db = getFirestore(app);
+    // Инициализация
+    const app = initializeApp(firebaseConfig);
+    const db = getFirestore(app);
 
-  document.getElementById("feedbackForm").addEventListener("submit", async (e) => {
-    e.preventDefault();
+    // Логика кнопки
+    document.getElementById("feedbackForm").addEventListener("submit", async (e) => {
+        e.preventDefault();
 
-    const nameInput = document.getElementById("userName").value;
-    const emailInput = document.getElementById("userEmail").value;
+        const nameInput = document.getElementById("userName").value;
+        const emailInput = document.getElementById("userEmail").value;
 
-    try {
-      // Запись в коллекцию "requests"
-      await addDoc(collection(db, "requests"), {
-        name: nameInput,
-        email: emailInput,
-  };
-        
-  const app = initializeApp(firebaseConfig);
-  const db = getFirestore(app);
-      
-  document.getElementById("feedbackForm").addEventListener("submit", async (e) => {
-    e.preventDefault();
+        try {
+            // Запись в коллекцию "requests"
+            await addDoc(collection(db, "requests"), {
+                name: nameInput,
+                email: emailInput,
+                timestamp: new Date()
+            });
 
-    const nameInput = document.getElementById("userName").value;
-    const emailInput = document.getElementById("userEmail").value;
-
-    try {
-      await addDoc(collection(db, "requests"), {
-        name: nameInput,
-        email: emailInput,
-        timestamp: new Date()
-      });
-
-      alert("Готово! Данные сохранены в Firebase.");
-      document.getElementById("feedbackForm").reset();
-    } catch (error) {
-      console.error("Ошибка записи: ", error);
-      alert("Ошибка при отправке.");
-    }
-  });
+            alert("Готово! Данные сохранены в Firebase.");
+            document.getElementById("feedbackForm").reset();
+        } catch (error) {
+            console.error("Ошибка записи: ", error);
+            alert("Ошибка при отправке.");
+        }
+    });
 </script>
+
 </body>
 </html>
