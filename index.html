@@ -118,9 +118,9 @@
                         <p style="margin: 5px 0;">${data.email}</p>
                         
                         <div class="actions">
-                            <button class="btn-action btn-edit" onclick="editEntry('${doc.id}', '${data.name}')">✏️ ред.</button>
+                            <button class="btn-action btn-edit" onclick="editEntry('${doc.id}', '${data.name}')">✏️ edit</button>
                             <button class="btn-action" onclick="changeLikes('${doc.id}', 'likes', 1)">👍 ${numLikes}</button>
-                            <button class="btn-action" onclick="changeLikes('${doc.id}', 'dislikes', 1)">👎 Дизлайк ${numDislikes}</button>
+                            <button class="btn-action" onclick="changeLikes('${doc.id}', 'dislikes', 1)">👎 ${numDislikes}</button>
                         </div>
                     </div>
                 `;
