@@ -11,10 +11,17 @@
         button#mainBtn:disabled { background: #ccc; }
         
         .post { background: #fff; border: 1px solid #eaeaea; padding: 15px; margin-top: 15px; border-radius: 8px; width: 100%; max-width: 500px; position: relative; }
+        .post b { font-size: 1.1em; color: #333; }
         .actions { display: flex; gap: 10px; margin-top: 10px; }
-        .btn-action { cursor: pointer; border: none; background: #f8f9fa; padding: 5px 12px; border-radius: 20px; font-size: 14px; transition: 0.2s; }
+        
+        /* Стили для всех кнопок действий */
+        .btn-action { cursor: pointer; border: none; background: #f8f9fa; padding: 6px 14px; border-radius: 20px; font-size: 14px; transition: 0.2s; display: flex; align-items: center; gap: 5px;}
         .btn-action:hover { background: #e2e6ea; }
-        .btn-edit { color: #007bff; font-size: 12px; cursor: pointer; text-decoration: underline; margin-left: 10px; }
+        
+        /* Стили для синей кнопки редактирования */
+        .btn-edit { background: #f0f7ff; color: #007bff; border: 1px solid #c2e0ff; }
+        .btn-edit:hover { background: #e0f0ff; }
+        
         .time { font-size: 11px; color: #999; float: right; }
     </style>
 </head>
@@ -48,7 +55,7 @@
         const app = initializeApp(firebaseConfig);
         const db = getFirestore(app);
 
-        // ФУНКЦИЯ 1: Редактирование имени (Update)
+        // ФУНКЦИЯ 1: Редактирование имени (через updateDoc)
         window.editEntry = async (id, oldName) => {
             const newName = prompt("Изменить имя профиля:", oldName);
             if (newName && newName !== oldName) {
@@ -57,18 +64,19 @@
             }
         };
 
-        // ФУНКЦИЯ 2: Лайки и Дизлайки (Increment/Decrement)
-        window.changeLikes = async (id, value) => {
+        // ФУНКЦИЯ 2: Лайки и Дизлайки (через increment)
+        window.changeLikes = async (id, fieldName, value) => {
             const docRef = doc(db, "requests", id);
             try {
-                // Используем increment(1) для лайка и increment(-1) для дизлайка
-                await updateDoc(docRef, { likes: increment(value) });
+                // value: 1 для увеличения, -1 для уменьшения
+                // fieldName: 'likes' или 'dislikes'
+                await updateDoc(docRef, { [fieldName]: increment(value) });
             } catch (e) {
                 console.error("Ошибка обновления:", e);
             }
         };
 
-        // Отправка данных
+        // Отправка данных (теперь добавляем и dislikes)
         document.getElementById('mainBtn').onclick = async () => {
             const name = document.getElementById('name').value;
             const email = document.getElementById('email').value;
@@ -81,6 +89,7 @@
                     name: name,
                     email: email,
                     likes: 0,
+                    dislikes: 0, // Добавили инициализацию дизлайков
                     timestamp: serverTimestamp()
                 });
                 document.getElementById('email').value = "";
@@ -90,22 +99,28 @@
             btn.disabled = false;
         };
 
-        // Слушатель обновлений в реальном времени
+        // Слушатель обновлений (автоматически перерисовывает все счетчики)
         const q = query(collection(db, "requests"), orderBy("timestamp", "desc"));
         onSnapshot(q, (snapshot) => {
             const feed = document.getElementById('feed');
             feed.innerHTML = "";
             snapshot.forEach((doc) => {
                 const data = doc.data();
+                // Гарантируем, что если поля нет, то будет 0
+                const numLikes = data.likes || 0;
+                const numDislikes = data.dislikes || 0;
+
                 feed.innerHTML += `
                     <div class="post">
                         <span class="time">${data.timestamp?.toDate().toLocaleString() || '...'}</span>
                         <b>${data.name}</b> 
-                        <span class="btn-edit" onclick="editEntry('${doc.id}', '${data.name}')">ред.</span>
+                        
                         <p style="margin: 5px 0;">${data.email}</p>
+                        
                         <div class="actions">
-                            <button class="btn-action" onclick="changeLikes('${doc.id}', 1)">👍 ${data.likes || 0}</button>
-                            <button class="btn-action" onclick="changeLikes('${doc.id}', -1)">👎 Дизлайк</button>
+                            <button class="btn-action btn-edit" onclick="editEntry('${doc.id}', '${data.name}')">✏️ ред.</button>
+                            <button class="btn-action" onclick="changeLikes('${doc.id}', 'likes', 1)">👍 ${numLikes}</button>
+                            <button class="btn-action" onclick="changeLikes('${doc.id}', 'dislikes', 1)">👎 Дизлайк ${numDislikes}</button>
                         </div>
                     </div>
                 `;
