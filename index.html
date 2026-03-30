@@ -10,8 +10,8 @@
         button#mainBtn { background: #007bff; color: white; border: none; padding: 12px; border-radius: 6px; width: 100%; font-weight: 600; cursor: pointer; }
         .post { background: #fff; border: 1px solid #eaeaea; padding: 15px; margin-top: 15px; border-radius: 8px; width: 100%; max-width: 500px; }
         .actions { display: flex; gap: 10px; margin-top: 10px; }
-        .btn-action { cursor: pointer; border: none; background: #f8f9fa; padding: 6px 12px; border-radius: 20px; font-size: 14px; }
-        .btn-edit { background: #e7f3ff; color: #007bff; font-weight: bold; }
+        .btn-action { cursor: pointer; border: none; background: #f8f9fa; padding: 6px 14px; border-radius: 20px; font-size: 14px; transition: 0.2s; display: flex; align-items: center; gap: 5px; }
+        .btn-edit { background: #e7f3ff; color: #007bff; font-weight: bold; border: 1px solid #c2e0ff; }
         .time { font-size: 11px; color: #999; float: right; }
     </style>
 </head>
@@ -45,32 +45,32 @@
         const app = initializeApp(firebaseConfig);
         const db = getFirestore(app);
 
-        // 1. ФУНКЦИЯ РЕДАКТИРОВАНИЯ (Теперь сохраняет в базу)
+        // 1. СОХРАНЯЕМОЕ РЕДАКТИРОВАНИЕ
         window.editEntry = async (id, oldName) => {
             const newName = prompt("Введите новое название:", oldName);
             if (newName && newName !== oldName) {
                 const docRef = doc(db, "requests", id);
                 try {
-                    // Это действие меняет данные прямо в Firebase
+                    // updateDoc отправляет данные в облако навсегда
                     await updateDoc(docRef, { name: newName });
                 } catch (e) {
-                    alert("Ошибка при сохранении в базу: " + e.message);
+                    alert("Ошибка сохранения: " + e.message);
                 }
             }
         };
 
-        // 2. ФУНКЦИЯ ЛАЙКОВ И ДИЗЛАЙКОВ
+        // 2. СОХРАНЯЕМЫЕ ЛАЙКИ/ДИЗЛАЙКИ
         window.changeStat = async (id, field) => {
             const docRef = doc(db, "requests", id);
             try {
-                // Изменяем либо 'likes', либо 'dislikes' на +1
+                // Используем increment(1), чтобы изменить значение в базе
                 await updateDoc(docRef, { [field]: increment(1) });
             } catch (e) {
                 console.error("Ошибка обновления:", e);
             }
         };
 
-        // Добавление новой записи
+        // Отправка новой записи
         document.getElementById('mainBtn').onclick = async () => {
             const name = document.getElementById('name').value;
             const email = document.getElementById('email').value;
@@ -81,17 +81,17 @@
                     name: name,
                     email: email,
                     likes: 0,
-                    dislikes: 0, // Инициализируем, чтобы кнопки работали сразу
+                    dislikes: 0, // КРИТИЧНО: создаем поле заранее!
                     timestamp: serverTimestamp()
                 });
                 document.getElementById('name').value = "";
                 document.getElementById('email').value = "";
             } catch (e) {
-                alert("Ошибка публикации");
+                alert("Ошибка публикации: проверьте Rules в Firebase");
             }
         };
 
-        // Слушатель базы данных
+        // Слушатель (Real-time)
         const q = query(collection(db, "requests"), orderBy("timestamp", "desc"));
         onSnapshot(q, (snapshot) => {
             const feed = document.getElementById('feed');
