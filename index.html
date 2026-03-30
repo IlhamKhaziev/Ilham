@@ -2,26 +2,16 @@
 <html lang="ru">
 <head>
     <meta charset="UTF-8">
-    <title>BaaS - Управление данными</title>
+    <title>BaaS - Исправлено</title>
     <style>
         body { font-family: 'Inter', sans-serif; background: #f4f7f6; display: flex; flex-direction: column; align-items: center; padding: 20px; }
         .container { width: 100%; max-width: 500px; background: white; padding: 25px; border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.05); margin-bottom: 20px; }
         input { width: 100%; padding: 12px; margin: 8px 0; border: 1px solid #ddd; border-radius: 6px; box-sizing: border-box; }
-        button#mainBtn { background: #007bff; color: white; border: none; padding: 12px; border-radius: 6px; width: 100%; font-weight: 600; cursor: pointer; transition: 0.3s; }
-        button#mainBtn:disabled { background: #ccc; }
-        
-        .post { background: #fff; border: 1px solid #eaeaea; padding: 15px; margin-top: 15px; border-radius: 8px; width: 100%; max-width: 500px; position: relative; }
-        .post b { font-size: 1.1em; color: #333; }
+        button#mainBtn { background: #007bff; color: white; border: none; padding: 12px; border-radius: 6px; width: 100%; font-weight: 600; cursor: pointer; }
+        .post { background: #fff; border: 1px solid #eaeaea; padding: 15px; margin-top: 15px; border-radius: 8px; width: 100%; max-width: 500px; }
         .actions { display: flex; gap: 10px; margin-top: 10px; }
-        
-        /* Стили для всех кнопок действий */
-        .btn-action { cursor: pointer; border: none; background: #f8f9fa; padding: 6px 14px; border-radius: 20px; font-size: 14px; transition: 0.2s; display: flex; align-items: center; gap: 5px;}
-        .btn-action:hover { background: #e2e6ea; }
-        
-        /* Стили для синей кнопки редактирования */
-        .btn-edit { background: #f0f7ff; color: #007bff; border: 1px solid #c2e0ff; }
-        .btn-edit:hover { background: #e0f0ff; }
-        
+        .btn-action { cursor: pointer; border: none; background: #f8f9fa; padding: 6px 12px; border-radius: 20px; font-size: 14px; }
+        .btn-edit { background: #e7f3ff; color: #007bff; font-weight: bold; }
         .time { font-size: 11px; color: #999; float: right; }
     </style>
 </head>
@@ -55,72 +45,68 @@
         const app = initializeApp(firebaseConfig);
         const db = getFirestore(app);
 
-        // ФУНКЦИЯ 1: Редактирование имени (через updateDoc)
+        // 1. ФУНКЦИЯ РЕДАКТИРОВАНИЯ (Теперь сохраняет в базу)
         window.editEntry = async (id, oldName) => {
-            const newName = prompt("Изменить имя профиля:", oldName);
+            const newName = prompt("Введите новое название:", oldName);
             if (newName && newName !== oldName) {
                 const docRef = doc(db, "requests", id);
-                await updateDoc(docRef, { name: newName });
+                try {
+                    // Это действие меняет данные прямо в Firebase
+                    await updateDoc(docRef, { name: newName });
+                } catch (e) {
+                    alert("Ошибка при сохранении в базу: " + e.message);
+                }
             }
         };
 
-        // ФУНКЦИЯ 2: Лайки и Дизлайки (через increment)
-        window.changeLikes = async (id, fieldName, value) => {
+        // 2. ФУНКЦИЯ ЛАЙКОВ И ДИЗЛАЙКОВ
+        window.changeStat = async (id, field) => {
             const docRef = doc(db, "requests", id);
             try {
-                // value: 1 для увеличения, -1 для уменьшения
-                // fieldName: 'likes' или 'dislikes'
-                await updateDoc(docRef, { [fieldName]: increment(value) });
+                // Изменяем либо 'likes', либо 'dislikes' на +1
+                await updateDoc(docRef, { [field]: increment(1) });
             } catch (e) {
                 console.error("Ошибка обновления:", e);
             }
         };
 
-        // Отправка данных (теперь добавляем и dislikes)
+        // Добавление новой записи
         document.getElementById('mainBtn').onclick = async () => {
             const name = document.getElementById('name').value;
             const email = document.getElementById('email').value;
-            if(!name || !email) return alert("Заполните поля!");
+            if(!name || !email) return alert("Заполните поля");
 
-            const btn = document.getElementById('mainBtn');
-            btn.disabled = true;
             try {
                 await addDoc(collection(db, "requests"), {
                     name: name,
                     email: email,
                     likes: 0,
-                    dislikes: 0, // Добавили инициализацию дизлайков
+                    dislikes: 0, // Инициализируем, чтобы кнопки работали сразу
                     timestamp: serverTimestamp()
                 });
+                document.getElementById('name').value = "";
                 document.getElementById('email').value = "";
             } catch (e) {
-                alert("Ошибка доступа.");
+                alert("Ошибка публикации");
             }
-            btn.disabled = false;
         };
 
-        // Слушатель обновлений (автоматически перерисовывает все счетчики)
+        // Слушатель базы данных
         const q = query(collection(db, "requests"), orderBy("timestamp", "desc"));
         onSnapshot(q, (snapshot) => {
             const feed = document.getElementById('feed');
             feed.innerHTML = "";
             snapshot.forEach((doc) => {
                 const data = doc.data();
-                // Гарантируем, что если поля нет, то будет 0
-                const numLikes = data.likes || 0;
-                const numDislikes = data.dislikes || 0;
-
                 feed.innerHTML += `
                     <div class="post">
                         <span class="time">${data.timestamp?.toDate().toLocaleString() || '...'}</span>
-                        <b>${data.name}</b> 
-                        
-                        <p style="margin: 5px 0;">${data.email}</p>
-                        
+                        <b>${data.name}</b>
+                        <p>${data.email}</p>
                         <div class="actions">
                             <button class="btn-action btn-edit" onclick="editEntry('${doc.id}', '${data.name}')">✏️ edit</button>
-                            <button class="btn-action" onclick="changeLikes('${doc.id}', 'likes', 1)">👍 ${numLikes}</button>
-                            <button class="btn-action" onclick="changeLikes('${doc.id}', 'dislikes', 1)">👎 ${numDislikes}</button>
+                            <button class="btn-action" onclick="changeStat('${doc.id}', 'likes')">👍 ${data.likes || 0}</button>
+                            <button class="btn-action" onclick="changeStat('${doc.id}', 'dislikes')">👎 ${data.dislikes || 0}</button>
                         </div>
                     </div>
                 `;
