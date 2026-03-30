@@ -4,32 +4,26 @@
     <meta charset="UTF-8">
     <title>BaaS - Панель управления</title>
     <style>
-        /* Базовые стили */
         body { font-family: 'Inter', sans-serif; background: #f4f7f6; display: flex; flex-direction: column; align-items: center; padding: 20px; }
         .container { width: 100%; max-width: 500px; background: white; padding: 25px; border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.05); }
         input { width: 100%; padding: 12px; margin: 8px 0; border: 1px solid #ddd; border-radius: 6px; box-sizing: border-box; }
         
-        /* Главная кнопка публикации */
         button#mainBtn { background: #007bff; color: white; border: none; padding: 12px; border-radius: 6px; width: 100%; font-weight: 600; cursor: pointer; transition: 0.3s; }
         button#mainBtn:hover { background: #0056b3; }
         button#mainBtn:disabled { background: #ccc; cursor: not-allowed; }
 
-        /* Стили карточек постов */
         .post { background: #fff; border: 1px solid #eaeaea; padding: 15px; margin-top: 15px; border-radius: 8px; width: 100%; max-width: 500px; position: relative; }
         .time { font-size: 11px; color: #999; float: right; }
         
-        /* Группа кнопок действий */
         .actions { display: flex; gap: 10px; margin-top: 10px; align-items: center; }
 
-        /* Стили для кнопок реакций (лайк/дизлайк) */
         .btn-reaction { cursor: pointer; border: none; background: #f8f9fa; padding: 6px 14px; border-radius: 20px; font-size: 14px; transition: 0.2s; display: flex; align-items: center; gap: 5px; }
         .btn-reaction:hover { background: #e2e6ea; }
-
-        /* НОВОЕ ОФОРМЛЕНИЕ КНОПКИ EDIT */
+        
         .btn-edit {
             cursor: pointer;
-            background: #e7f3ff; /* Светло-синий фон */
-            color: #007bff; /* Синий текст */
+            background: #e7f3ff; 
+            color: #007bff; 
             border: 1px solid #c2e0ff;
             padding: 6px 14px;
             border-radius: 20px;
@@ -53,7 +47,7 @@
         <h3>Панель управления данными</h3>
         <input type="text" id="name" placeholder="Имя профиля">
         <input type="email" id="email" placeholder="Рабочий Email">
-        <button id="mainBtn">Опубликовать в облако</button>
+        <button id="mainBtn">Панель управления постами</button>
     </div>
 
     <div id="feed" style="width: 100%; max-width: 500px;"></div>
@@ -89,7 +83,6 @@
             }
         };
 
-        // ФУНКЦИЯ 2: Редактирование названия (UpdateDoc)
         window.editName = async (id, currentName) => {
             const newName = prompt("Введите новое имя профиля:", currentName);
             if (newName && newName !== currentName) {
@@ -103,7 +96,6 @@
             }
         };
 
-        // Публикация нового поста
         document.getElementById('mainBtn').onclick = async () => {
             const nameInput = document.getElementById('name');
             const emailInput = document.getElementById('email');
@@ -118,7 +110,7 @@
                     name: nameInput.value,
                     email: emailInput.value,
                     likes: 0,
-                    dislikes: 0, // Инициализируем оба счетчика
+                    dislikes: 0,
                     timestamp: serverTimestamp()
                 });
                 nameInput.value = "";
@@ -130,7 +122,6 @@
             btn.disabled = false;
         };
 
-        // Слушатель базы данных в реальном времени
         const q = query(collection(db, "requests"), orderBy("timestamp", "desc"));
         onSnapshot(q, (snapshot) => {
             const feed = document.getElementById('feed');
