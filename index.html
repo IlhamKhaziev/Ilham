@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Облачное приложение с фото</title>
+    <title>Облачное приложение 2.0</title>
     <style>
         body { font-family: 'Inter', sans-serif; background: #f4f7f6; display: flex; flex-direction: column; align-items: center; padding: 20px; }
         .container { width: 100%; max-width: 500px; background: white; padding: 25px; border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.05); margin-bottom: 20px; }
@@ -17,17 +17,18 @@
         button:hover { background: #0056b3; }
         button:disabled { background: #ccc; }
         
-        /* Специфичные стили для фото */
-        .file-upload-wrapper { display: flex; align-items: center; gap: 10px; margin: 10px 0; }
-        #imagePreview { width: 100%; max-height: 200px; object-fit: cover; border-radius: 8px; display: none; margin-bottom: 10px; border: 1px solid #ddd; }
-        .btn-secondary { background: #6c757d; padding: 8px 15px; font-size: 14px; width: auto; }
+        /* Загрузка фото */
+        .upload-row { display: flex; align-items: center; gap: 10px; margin: 10px 0; }
+        #imagePreview { width: 100%; max-height: 250px; object-fit: cover; border-radius: 8px; display: none; margin-bottom: 15px; border: 1px solid #ddd; }
+        .btn-photo { background: #6c757d; width: auto; padding: 8px 15px; }
 
-        /* Посты */
-        .post { background: #fff; border: 1px solid #eaeaea; padding: 15px; margin-top: 15px; border-radius: 8px; width: 100%; max-width: 500px; }
+        /* Лента постов */
+        .post { background: #fff; border: 1px solid #eaeaea; padding: 15px; margin-top: 15px; border-radius: 12px; width: 100%; max-width: 500px; box-shadow: 0 2px 5px rgba(0,0,0,0.02); }
         .post-header { display: flex; align-items: center; gap: 10px; margin-bottom: 10px; }
-        .post-avatar { width: 30px; height: 30px; border-radius: 50%; }
-        .post-image { width: 100%; border-radius: 8px; margin-top: 10px; display: block; }
-        .like-btn { cursor: pointer; border: none; background: #f8f9fa; padding: 5px 12px; border-radius: 20px; margin-top: 10px; }
+        .post-avatar { width: 35px; height: 35px; border-radius: 50%; }
+        .post-img-content { width: 100%; border-radius: 8px; margin-top: 10px; display: block; }
+        .like-btn { cursor: pointer; border: none; background: #f8f9fa; padding: 6px 15px; border-radius: 20px; margin-top: 10px; transition: 0.2s; }
+        .like-btn:hover { background: #e2e6ea; }
         .time { font-size: 11px; color: #999; margin-left: auto; }
     </style>
 </head>
@@ -36,20 +37,22 @@
     <div id="authSection" class="container" style="text-align: center;">
         <button id="loginBtn">Войти через Google</button>
         <div id="userInfo" style="display: none;" class="auth-bar">
-            <img id="userPhoto" class="user-avatar" src="" alt="Avatar">
+            <img id="userPhoto" class="user-avatar" src="">
             <span id="userName" style="font-weight: bold;"></span>
-            <button id="logoutBtn" style="background: #ff4757; width: auto; padding: 8px 15px;">Выйти</button>
+            <button id="logoutBtn" style="background: #ff4757; width: auto; margin-left: auto;">Выйти</button>
         </div>
     </div>
 
     <div id="messageForm" class="container" style="display: none;">
         <h3>Создать запись</h3>
+        <input type="text" id="name" placeholder="Имя профиля" readonly>
+        <input type="email" id="email" placeholder="Ваш Email" readonly>
         <input type="text" id="content" placeholder="Что у вас нового?">
         
-        <div class="file-upload-wrapper">
-            <button type="button" id="selectFileBtn" class="btn-secondary">📁 Фото</button>
+        <div class="upload-row">
+            <button type="button" id="browseBtn" class="btn-photo">📁 Фото</button>
             <input type="file" id="fileInput" accept="image/*" style="display: none;">
-            <span id="fileStatus" style="font-size: 12px; color: #666;">Файл не выбран</span>
+            <span id="fileLabel" style="font-size: 12px; color: #777;">Файл не выбран</span>
         </div>
         <img id="imagePreview" src="">
 
@@ -65,13 +68,14 @@
         import { getStorage, ref, uploadBytes, getDownloadURL } from "https://www.gstatic.com/firebasejs/10.7.0/firebase-storage.js";
 
         const firebaseConfig = {
-            apiKey: "AIzaSyDgUxR0TXafc_qA-rpdSzKn33265IfxsHU",
-            authDomain: "qazaq-a072e.firebaseapp.com",
-            projectId: "qazaq-a072e",
-            storageBucket: "qazaq-a072e.appspot.com", // Используйте стандартный bucket для картинок
-            messagingSenderId: "47025480090",
-            appId: "1:47025480090:web:3dd74ff29bc0c149f39a23"
-        };
+  apiKey: "AIzaSyBucYbom6btGkn1kBhV72RXAd7dGamxJq0",
+  authDomain: "ilham-d9438.firebaseapp.com",
+  projectId: "ilham-d9438",
+  storageBucket: "ilham-d9438.firebasestorage.app",
+  messagingSenderId: "498564012469",
+  appId: "1:498564012469:web:d3ace73422dac888b021fc",
+  measurementId: "G-PHBGQD3JJJ"
+};
 
         const app = initializeApp(firebaseConfig);
         const db = getFirestore(app);
@@ -81,83 +85,85 @@
 
         const fileInput = document.getElementById('fileInput');
         const imagePreview = document.getElementById('imagePreview');
-        const fileStatus = document.getElementById('fileStatus');
+        const fileLabel = document.getElementById('fileLabel');
 
-        // Выбор файла через красивую кнопку
-        document.getElementById('selectFileBtn').onclick = () => fileInput.click();
-
+        // Логика выбора файла
+        document.getElementById('browseBtn').onclick = () => fileInput.click();
         fileInput.onchange = (e) => {
             const file = e.target.files[0];
             if (file) {
-                fileStatus.innerText = file.name;
+                fileLabel.innerText = file.name;
                 imagePreview.src = URL.createObjectURL(file);
                 imagePreview.style.display = 'block';
             }
         };
 
-        // Авторизация
+        // Логика авторизации (старые функции + заполнение полей)
         onAuthStateChanged(auth, (user) => {
-            const isLogged = !!user;
-            document.getElementById('loginBtn').style.display = isLogged ? 'none' : 'block';
-            document.getElementById('userInfo').style.display = isLogged ? 'flex' : 'none';
-            document.getElementById('messageForm').style.display = isLogged ? 'block' : 'none';
             if (user) {
+                document.getElementById('loginBtn').style.display = 'none';
+                document.getElementById('userInfo').style.display = 'flex';
+                document.getElementById('messageForm').style.display = 'block';
+                
                 document.getElementById('userName').innerText = user.displayName;
                 document.getElementById('userPhoto').src = user.photoURL;
+                document.getElementById('name').value = user.displayName; // Прошлая функция
+                document.getElementById('email').value = user.email;       // Прошлая функция
+            } else {
+                document.getElementById('loginBtn').style.display = 'block';
+                document.getElementById('userInfo').style.display = 'none';
+                document.getElementById('messageForm').style.display = 'none';
             }
         });
 
         document.getElementById('loginBtn').onclick = () => signInWithPopup(auth, provider);
         document.getElementById('logoutBtn').onclick = () => signOut(auth);
 
-        // Лайки
+        // Функция лайка (прошлая функция)
         window.processLike = (id) => updateDoc(doc(db, "requests", id), { likes: increment(1) });
 
-        // Публикация поста
+        // Публикация (объединенная: текст + фото)
         document.getElementById('mainBtn').onclick = async () => {
             const text = document.getElementById('content').value;
             const file = fileInput.files[0];
-            if (!text && !file) return alert("Добавьте текст или фото!");
+            if (!text && !file) return alert("Напишите что-нибудь или добавьте фото");
 
             const btn = document.getElementById('mainBtn');
             btn.disabled = true;
-            btn.innerText = "Загрузка...";
+            btn.innerText = "Публикация...";
 
             try {
                 let imageUrl = "";
-
-                // Если есть файл, сначала загружаем его в Storage
                 if (file) {
-                    const storageRef = ref(storage, `posts/${Date.now()}_${file.name}`);
+                    const storageRef = ref(storage, `content/${Date.now()}_${file.name}`);
                     const snapshot = await uploadBytes(storageRef, file);
                     imageUrl = await getDownloadURL(snapshot.ref);
                 }
 
-                // Создаем запись в Firestore
                 await addDoc(collection(db, "requests"), {
                     name: auth.currentUser.displayName,
+                    email: auth.currentUser.email,
                     photo: auth.currentUser.photoURL,
                     text: text,
-                    imageUrl: imageUrl, // Ссылка на картинку в облаке
+                    imageUrl: imageUrl, 
                     likes: 0,
                     timestamp: serverTimestamp()
                 });
 
-                // Сброс формы
+                // Очистка полей
                 document.getElementById('content').value = "";
                 fileInput.value = "";
-                fileStatus.innerText = "Файл не выбран";
+                fileLabel.innerText = "Файл не выбран";
                 imagePreview.style.display = 'none';
             } catch (e) {
-                console.error(e);
-                alert("Ошибка публикации!");
+                alert("Ошибка! Проверьте правила (Rules) в консоли Firebase.");
             } finally {
                 btn.disabled = false;
                 btn.innerText = "Опубликовать в облако";
             }
         };
 
-        // Лента
+        // Лента (отображение фото + тексты)
         const q = query(collection(db, "requests"), orderBy("timestamp", "desc"));
         onSnapshot(q, (snapshot) => {
             const feed = document.getElementById('feed');
@@ -167,12 +173,15 @@
                 feed.innerHTML += `
                     <div class="post">
                         <div class="post-header">
-                            <img src="${data.photo || 'https://via.placeholder.com/30'}" class="post-avatar">
-                            <b>${data.name}</b>
+                            <img src="${data.photo || 'https://via.placeholder.com/35'}" class="post-avatar">
+                            <div>
+                                <b>${data.name}</b><br>
+                                <small style="color: #888;">${data.email}</small>
+                            </div>
                             <span class="time">${data.timestamp?.toDate().toLocaleTimeString() || '...'}</span>
                         </div>
                         <p>${data.text}</p>
-                        ${data.imageUrl ? `<img src="${data.imageUrl}" class="post-image">` : ''}
+                        ${data.imageUrl ? `<img src="${data.imageUrl}" class="post-img-content">` : ''}
                         <button class="like-btn" onclick="processLike('${doc.id}')">👍 ${data.likes || 0}</button>
                     </div>
                 `;
