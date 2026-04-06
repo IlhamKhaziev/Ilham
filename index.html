@@ -3,69 +3,72 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Облачное приложение</title>
+    <title>Private Cloud Chat</title>
     <style>
         body { font-family: 'Inter', sans-serif; background: #f4f7f6; display: flex; flex-direction: column; align-items: center; padding: 20px; }
-        .container { width: 100%; max-width: 500px; background: white; padding: 25px; border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.05); margin-bottom: 20px; }
+        .container { width: 100%; max-width: 600px; background: white; padding: 20px; border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.05); }
         
-        .auth-bar { background: white; padding: 15px; border-radius: 12px; margin-bottom: 20px; display: flex; align-items: center; gap: 15px; box-shadow: 0 2px 10px rgba(0,0,0,0.05); }
-        .user-avatar { width: 40px; height: 40px; border-radius: 50%; border: 2px solid #007bff; }
+        .auth-bar { display: flex; align-items: center; justify-content: space-between; margin-bottom: 20px; width: 100%; max-width: 600px; background: white; padding: 15px; border-radius: 12px; }
+        .user-info { display: flex; align-items: center; gap: 10px; }
+        .user-avatar { width: 40px; height: 40px; border-radius: 50%; }
 
-        input { width: 100%; padding: 12px; margin: 8px 0; border: 1px solid #ddd; border-radius: 6px; box-sizing: border-box; }
-        button { background: #007bff; color: white; border: none; padding: 12px; border-radius: 6px; width: 100%; font-weight: 600; cursor: pointer; transition: 0.3s; }
-        button:hover { background: #0056b3; }
-        button:disabled { background: #ccc; }
-        .logout-btn { background: #ff4757; padding: 8px 15px; width: auto; font-size: 14px; }
+        /* Список пользователей */
+        .users-list { display: flex; gap: 15px; overflow-x: auto; padding: 10px 0; border-bottom: 1px solid #eee; margin-bottom: 15px; }
+        .user-card { cursor: pointer; text-align: center; min-width: 70px; transition: 0.2s; }
+        .user-card:hover { transform: scale(1.05); }
+        .user-card img { width: 45px; height: 45px; border-radius: 50%; border: 2px solid transparent; }
+        .user-card.active img { border-color: #007bff; }
+        .user-card p { font-size: 12px; margin: 5px 0; }
 
-        /* Стили для фото */
-        .upload-row { display: flex; align-items: center; gap: 10px; margin: 10px 0; }
-        .photo-btn { background: #6c757d; width: auto; padding: 8px 15px; font-size: 14px; }
-        #previewImg { width: 100%; max-height: 200px; object-fit: cover; border-radius: 8px; display: none; margin-bottom: 10px; border: 1px solid #ddd; }
+        /* Окно чата */
+        #chatBox { height: 350px; overflow-y: auto; border: 1px solid #f0f0f0; padding: 15px; display: flex; flex-direction: column; gap: 10px; background: #fafafa; border-radius: 8px; }
+        .msg { max-width: 70%; padding: 8px 15px; border-radius: 15px; font-size: 14px; position: relative; }
+        .msg.sent { align-self: flex-end; background: #007bff; color: white; border-bottom-right-radius: 2px; }
+        .msg.received { align-self: flex-start; background: #e9e9eb; color: #333; border-bottom-left-radius: 2px; }
 
-        /* Посты */
-        .post { background: #fff; border: 1px solid #eaeaea; padding: 15px; margin-top: 15px; border-radius: 8px; width: 100%; max-width: 500px; }
-        .post-header { display: flex; align-items: center; gap: 10px; margin-bottom: 10px; }
-        .post-avatar { width: 30px; height: 30px; border-radius: 50%; }
-        .post-img { width: 100%; border-radius: 8px; margin-top: 10px; }
-        .like-btn { cursor: pointer; border: none; background: #f8f9fa; padding: 5px 12px; border-radius: 20px; margin-top: 10px; }
-        .time { font-size: 11px; color: #999; margin-left: auto; }
+        .input-area { display: flex; gap: 10px; margin-top: 15px; }
+        input { flex: 1; padding: 12px; border: 1px solid #ddd; border-radius: 25px; outline: none; }
+        .send-btn { background: #007bff; color: white; border: none; width: 45px; height: 45px; border-radius: 50%; cursor: pointer; }
+        
+        .hidden { display: none !important; }
     </style>
 </head>
 <body>
 
     <div id="authSection" class="container" style="text-align: center;">
-        <button id="loginBtn">Войти через Google</button>
-        <div id="userInfo" style="display: none;" class="auth-bar">
-            <img id="userPhoto" class="user-avatar" src="" alt="Avatar">
-            <span id="userName" style="font-weight: bold;"></span>
-            <button id="logoutBtn" class="logout-btn">Выйти</button>
-        </div>
+        <button id="loginBtn" style="padding: 15px 30px; cursor:pointer;">Войти через Google</button>
     </div>
 
-    <div id="messageForm" class="container" style="display: none;">
-        <h3>Создать запись</h3>
-        <input type="text" id="name" placeholder="Имя профиля" readonly>
-        <input type="email" id="email" placeholder="Ваш Email" readonly>
-        <input type="text" id="content" placeholder="Что у вас нового?">
-        
-        <div class="upload-row">
-            <button type="button" id="browseBtn" class="photo-btn">📁 Фото</button>
-            <input type="file" id="fileInput" accept="image/*" style="display: none;">
-            <span id="fileName" style="font-size: 12px; color: #666;">Файл не выбран</span>
+    <div id="mainApp" class="hidden" style="width: 100%; max-width: 600px;">
+        <div class="auth-bar">
+            <div class="user-info">
+                <img id="userPhoto" class="user-avatar" src="">
+                <span id="userName" style="font-weight: bold;"></span>
+            </div>
+            <button id="logoutBtn" style="background:none; border:none; color:red; cursor:pointer;">Выйти</button>
         </div>
-        <img id="previewImg" src="">
 
-        <button id="mainBtn">Опубликовать в облако</button>
+        <div class="container">
+            <p style="font-size: 14px; color: #666;">Выберите собеседника:</p>
+            <div id="usersList" class="users-list">
+                </div>
+
+            <div id="chatHeader" style="font-weight: bold; margin-bottom: 10px;">Чат не выбран</div>
+            <div id="chatBox">
+                <p style="text-align: center; color: #999;">Выберите, кому написать...</p>
+            </div>
+
+            <div class="input-area">
+                <input type="text" id="messageInput" placeholder="Ваше сообщение...">
+                <button id="sendBtn" class="send-btn">➤</button>
+            </div>
+        </div>
     </div>
-
-    <div id="feed"></div>
 
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.0/firebase-app.js";
-        import { getFirestore, collection, addDoc, query, orderBy, onSnapshot, serverTimestamp, updateDoc, doc, increment } from "https://www.gstatic.com/firebasejs/10.7.0/firebase-firestore.js";
+        import { getFirestore, collection, addDoc, query, orderBy, onSnapshot, serverTimestamp, where, setDoc, doc, getDocs } from "https://www.gstatic.com/firebasejs/10.7.0/firebase-firestore.js";
         import { getAuth, signInWithPopup, GoogleAuthProvider, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.7.0/firebase-auth.js";
-        // Импортируем Storage для картинок
-        import { getStorage, ref, uploadBytes, getDownloadURL } from "https://www.gstatic.com/firebasejs/10.7.0/firebase-storage.js";
 
         const firebaseConfig = {
             apiKey: "AIzaSyBucYbom6btGkn1kBhV72RXAd7dGamxJq0",
@@ -79,117 +82,114 @@
         const app = initializeApp(firebaseConfig);
         const db = getFirestore(app);
         const auth = getAuth(app);
-        const storage = getStorage(app);
         const provider = new GoogleAuthProvider();
 
-        // Элементы управления фото
-        const fileInput = document.getElementById('fileInput');
-        const previewImg = document.getElementById('previewImg');
-        const fileNameText = document.getElementById('fileName');
+        let currentUser = null;
+        let selectedUserId = null;
+        let unsubscribeChat = null;
 
-        document.getElementById('browseBtn').onclick = () => fileInput.click();
-        
-        fileInput.onchange = (e) => {
-            const file = e.target.files[0];
-            if (file) {
-                fileNameText.innerText = file.name;
-                previewImg.src = URL.createObjectURL(file);
-                previewImg.style.display = 'block';
-            }
-        };
-
-        // Авторизация
-        onAuthStateChanged(auth, (user) => {
+        // 1. Авторизация и сохранение пользователя в БД
+        onAuthStateChanged(auth, async (user) => {
             if (user) {
-                document.getElementById('loginBtn').style.display = 'none';
-                document.getElementById('userInfo').style.display = 'flex';
-                document.getElementById('messageForm').style.display = 'block';
+                currentUser = user;
+                document.getElementById('authSection').classList.add('hidden');
+                document.getElementById('mainApp').classList.remove('hidden');
                 document.getElementById('userName').innerText = user.displayName;
                 document.getElementById('userPhoto').src = user.photoURL;
-                document.getElementById('name').value = user.displayName;
-                document.getElementById('email').value = user.email;
+
+                // Сохраняем данные о пользователе в коллекцию "users"
+                await setDoc(doc(db, "users", user.uid), {
+                    uid: user.uid,
+                    name: user.displayName,
+                    photo: user.photoURL,
+                    lastSeen: serverTimestamp()
+                }, { merge: true });
+
+                loadUsers();
             } else {
-                document.getElementById('loginBtn').style.display = 'block';
-                document.getElementById('userInfo').style.display = 'none';
-                document.getElementById('messageForm').style.display = 'none';
+                document.getElementById('authSection').classList.remove('hidden');
+                document.getElementById('mainApp').classList.add('hidden');
             }
         });
 
-        document.getElementById('loginBtn').onclick = () => signInWithPopup(auth, provider);
-        document.getElementById('logoutBtn').onclick = () => signOut(auth);
+        // 2. Загрузка списка всех пользователей (кроме себя)
+        async function loadUsers() {
+            const q = query(collection(db, "users"));
+            onSnapshot(q, (snapshot) => {
+                const list = document.getElementById('usersList');
+                list.innerHTML = "";
+                snapshot.forEach((userDoc) => {
+                    const userData = userDoc.data();
+                    if (userData.uid === currentUser.uid) return;
 
-        // Лайки
-        window.processLike = (id) => updateDoc(doc(db, "requests", id), { likes: increment(1) });
-
-        // Публикация (Текст + Картинка)
-        document.getElementById('mainBtn').onclick = async () => {
-            const content = document.getElementById('content').value;
-            const file = fileInput.files[0];
-            
-            if (!content && !file) return alert("Введите текст или выберите фото!");
-
-            const btn = document.getElementById('mainBtn');
-            btn.disabled = true;
-            btn.innerText = "Загрузка...";
-
-            try {
-                let imageUrl = "";
-
-                // Сначала грузим файл в Storage
-                if (file) {
-                    const storageRef = ref(storage, 'images/' + Date.now() + "_" + file.name);
-                    const snapshot = await uploadBytes(storageRef, file);
-                    imageUrl = await getDownloadURL(snapshot.ref);
-                }
-
-                // Затем сохраняем пост в базу
-                await addDoc(collection(db, "requests"), {
-                    name: auth.currentUser.displayName,
-                    email: auth.currentUser.email,
-                    photo: auth.currentUser.photoURL,
-                    text: content,
-                    img: imageUrl,
-                    likes: 0,
-                    timestamp: serverTimestamp()
+                    const userEl = document.createElement('div');
+                    userEl.className = `user-card ${selectedUserId === userData.uid ? 'active' : ''}`;
+                    userEl.innerHTML = `
+                        <img src="${userData.photo || 'https://via.placeholder.com/45'}">
+                        <p>${userData.name.split(' ')[0]}</p>
+                    `;
+                    userEl.onclick = () => selectChat(userData);
+                    list.appendChild(userEl);
                 });
+            });
+        }
 
-                // Чистим форму
-                document.getElementById('content').value = "";
-                fileInput.value = "";
-                previewImg.style.display = 'none';
-                fileNameText.innerText = "Файл не выбран";
-                alert("Опубликовано!");
+        // 3. Выбор чата
+        function selectChat(targetUser) {
+            selectedUserId = targetUser.uid;
+            document.getElementById('chatHeader').innerText = `Чат с: ${targetUser.name}`;
+            
+            // Перерисовываем список (для активного состояния)
+            loadUsers();
 
-            } catch (e) {
-                console.error(e);
-                alert("Ошибка! Проверьте правила (Rules) Storage и Firestore.");
-            } finally {
-                btn.disabled = false;
-                btn.innerText = "Опубликовать в облако";
-            }
+            // Если была старая подписка на сообщения — отменяем
+            if (unsubscribeChat) unsubscribeChat();
+
+            // Загружаем сообщения именно между мной и выбранным пользователем
+            // Логика: (я -> он) ИЛИ (он -> я)
+            const q = query(
+                collection(db, "messages"),
+                orderBy("timestamp", "asc")
+            );
+
+            unsubscribeChat = onSnapshot(q, (snapshot) => {
+                const chatBox = document.getElementById('chatBox');
+                chatBox.innerHTML = "";
+                snapshot.forEach((msgDoc) => {
+                    const msg = msgDoc.data();
+                    // Фильтр на клиенте (в Firebase нужны составные индексы для сложных фильтров)
+                    const isBetween = (msg.senderId === currentUser.uid && msg.receiverId === selectedUserId) ||
+                                      (msg.senderId === selectedUserId && msg.receiverId === currentUser.uid);
+                    
+                    if (isBetween) {
+                        const type = msg.senderId === currentUser.uid ? 'sent' : 'received';
+                        chatBox.innerHTML += `<div class="msg ${type}">${msg.text}</div>`;
+                    }
+                });
+                chatBox.scrollTop = chatBox.scrollHeight;
+            });
+        }
+
+        // 4. Отправка сообщения
+        document.getElementById('sendBtn').onclick = async () => {
+            const input = document.getElementById('messageInput');
+            const text = input.value.trim();
+
+            if (!text || !selectedUserId) return;
+
+            await addDoc(collection(db, "messages"), {
+                senderId: currentUser.uid,
+                receiverId: selectedUserId,
+                text: text,
+                timestamp: serverTimestamp()
+            });
+
+            input.value = "";
         };
 
-        // Лента
-        const q = query(collection(db, "requests"), orderBy("timestamp", "desc"));
-        onSnapshot(q, (snapshot) => {
-            const feed = document.getElementById('feed');
-            feed.innerHTML = "";
-            snapshot.forEach((doc) => {
-                const data = doc.data();
-                feed.innerHTML += `
-                    <div class="post">
-                        <div class="post-header">
-                            <img src="${data.photo || 'https://via.placeholder.com/30'}" class="post-avatar">
-                            <b>${data.name}</b>
-                            <span class="time">${data.timestamp?.toDate().toLocaleTimeString() || '...'}</span>
-                        </div>
-                        <p>${data.text || ""}</p>
-                        ${data.img ? `<img src="${data.img}" class="post-img">` : ""}
-                        <button class="like-btn" onclick="processLike('${doc.id}')">👍 ${data.likes || 0}</button>
-                    </div>
-                `;
-            });
-        });
+        // Вход/Выход
+        document.getElementById('loginBtn').onclick = () => signInWithPopup(auth, provider);
+        document.getElementById('logoutBtn').onclick = () => signOut(auth);
     </script>
 </body>
 </html>
