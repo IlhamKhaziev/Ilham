@@ -123,7 +123,7 @@
                 .eq('id', MY_ID);
 
             if (error) {
-                alert("Ошибка! Проверьте RLS политики в Supabase.");
+                alert(error.message);
                 console.error(error);
             } else {
                 fetchGroup();
