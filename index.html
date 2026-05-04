@@ -89,6 +89,7 @@
             align-items: center;
             justify-content: center;
             font-size: 24px;
+            color: white;
         }
 
         .user-name {
@@ -167,6 +168,7 @@
             margin-right: 14px;
             font-size: 1.2rem;
             flex-shrink: 0;
+            color: white;
         }
 
         .user-info {
@@ -279,14 +281,11 @@
             color: white;
         }
 
-        .debug-info {
-            font-size: 11px;
-            color: #999;
-            margin-top: 10px;
-            padding: 8px;
-            background: #f0f0f0;
-            border-radius: 6px;
-            word-break: break-all;
+        .error-message {
+            color: #dc3545;
+            font-size: 12px;
+            margin-top: 5px;
+            display: none;
         }
     </style>
 </head>
@@ -294,7 +293,9 @@
     <div class="container">
         <div class="card">
             <h2>👤 Мой профиль</h2>
-            <div id="myInfo">Загрузка...</div>
+            <div id="myInfo">
+                <div class="loading">Загрузка...</div>
+            </div>
             
             <div id="statusButtons" class="status-buttons">
                 <button class="btn btn-study" onclick="window.changeStatus('📚 Учусь')">📚 Учусь</button>
@@ -316,6 +317,7 @@
             <h3 id="modalTitle">📝 Регистрация</h3>
             <input type="email" id="emailInput" placeholder="Email">
             <input type="password" id="passwordInput" placeholder="Пароль (мин. 6 символов)">
+            <div id="errorMessage" class="error-message"></div>
             <button class="btn-modal btn-primary" id="modalSubmitBtn">Зарегистрироваться</button>
             <button class="btn-modal btn-secondary" onclick="window.closeEmailModal()">Отмена</button>
         </div>
@@ -324,12 +326,22 @@
     <script type="module">
         import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js/+esm'
 
-        // Конфигурация Supabase
+        // ========== ПРАВИЛЬНЫЙ API КЛЮЧ ==========
+        // Public anon key - нужно взять из настроек Supabase
+        // Замените этот ключ на свой из Project Settings -> API -> Project API keys (anon public)
         const SUPABASE_URL = 'https://ebthetkjsjztqrphpezd.supabase.co';
-        const SUPABASE_KEY = 'sb_publishable_idalKmPYLEUAMuEl0hjZEQ_CjFIWrRZ';
+        const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImVidGhldGtqc2p6dHFycGhwZXpkIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzY2NjIzMTgsImV4cCI6MjA5MjIzODMxOH0.NkFoTjxVR-d2rvxCtGE4WuP659YSm2dblZfjj1gPjUU';
+        
+        // ВНИМАНИЕ! Нужно заменить TEST_KEY_REPLACE_ME на реальный ключ из Supabase!
+        // Как найти ключ:
+        // 1. Зайдите в https://supabase.com/dashboard
+        // 2. Выберите проект "ebthetkjsjztqrphpezd"
+        // 3. Слева меню: Project Settings → API
+        // 4. Скопируйте "anon public" ключ
+        
+        console.log('Supabase URL:', SUPABASE_URL);
+        
         const supabase = createClient(SUPABASE_URL, SUPABASE_KEY);
-
-        console.log('Supabase инициализирован');
 
         // Получение текущего URL
         const getCurrentUrl = () => {
@@ -344,7 +356,6 @@
             console.log('loginWithGoogle вызван');
             try {
                 const redirectUrl = getCurrentUrl();
-                console.log('Redirect URL:', redirectUrl);
                 
                 const { data, error } = await supabase.auth.signInWithOAuth({
                     provider: 'google',
@@ -357,15 +368,10 @@
                     }
                 });
                 
-                if (error) {
-                    console.error('Ошибка:', error);
-                    alert('Ошибка входа: ' + error.message);
-                } else {
-                    console.log('Перенаправление на Google...', data);
-                }
+                if (error) throw error;
             } catch (error) {
-                console.error('Исключение:', error);
-                alert('Ошибка: ' + error.message);
+                console.error('Ошибка:', error);
+                alert('Ошибка входа: ' + error.message);
             }
         };
 
@@ -374,9 +380,11 @@
             const modal = document.getElementById('emailModal');
             const title = document.getElementById('modalTitle');
             const submitBtn = document.getElementById('modalSubmitBtn');
+            const errorMsg = document.getElementById('errorMessage');
             
             document.getElementById('emailInput').value = '';
             document.getElementById('passwordInput').value = '';
+            errorMsg.style.display = 'none';
             
             if (type === 'register') {
                 title.textContent = '📝 Регистрация';
@@ -398,14 +406,19 @@
         async function registerWithEmail() {
             const email = document.getElementById('emailInput').value;
             const password = document.getElementById('passwordInput').value;
+            const errorMsg = document.getElementById('errorMessage');
+            
+            errorMsg.style.display = 'none';
             
             if (!email || !password) {
-                alert('Заполните все поля');
+                errorMsg.textContent = 'Заполните все поля';
+                errorMsg.style.display = 'block';
                 return;
             }
             
             if (password.length < 6) {
-                alert('Пароль должен быть не менее 6 символов');
+                errorMsg.textContent = 'Пароль должен быть не менее 6 символов';
+                errorMsg.style.display = 'block';
                 return;
             }
             
@@ -423,22 +436,28 @@
                 if (error) throw error;
                 
                 if (data.user?.identities?.length === 0) {
-                    alert('Пользователь с таким email уже существует');
+                    errorMsg.textContent = 'Пользователь с таким email уже существует';
+                    errorMsg.style.display = 'block';
                 } else {
                     alert('Регистрация успешна! Проверьте почту для подтверждения.');
+                    closeEmailModal();
                 }
-                closeEmailModal();
             } catch (error) {
-                alert('Ошибка: ' + error.message);
+                errorMsg.textContent = 'Ошибка: ' + error.message;
+                errorMsg.style.display = 'block';
             }
         }
 
         async function loginWithEmail() {
             const email = document.getElementById('emailInput').value;
             const password = document.getElementById('passwordInput').value;
+            const errorMsg = document.getElementById('errorMessage');
+            
+            errorMsg.style.display = 'none';
             
             if (!email || !password) {
-                alert('Заполните все поля');
+                errorMsg.textContent = 'Заполните все поля';
+                errorMsg.style.display = 'block';
                 return;
             }
             
@@ -452,7 +471,8 @@
                 
                 closeEmailModal();
             } catch (error) {
-                alert('Ошибка входа: ' + error.message);
+                errorMsg.textContent = 'Ошибка входа: ' + error.message;
+                errorMsg.style.display = 'block';
             }
         }
 
@@ -538,7 +558,7 @@
                     return `
                         <div class="user-item">
                             ${hasAvatar ? 
-                                `<img class="user-avatar" src="${escapeHtml(user.avatar_url)}" onerror="this.style.display='none'; this.nextSibling.style.display='flex'" alt="avatar">
+                                `<img class="user-avatar" src="${escapeHtml(user.avatar_url)}" onerror="this.style.display='none'; this.nextElementSibling.style.display='flex'" alt="avatar">
                                 <div class="user-avatar-placeholder" style="display: none;">${getStatusEmoji(user.status)}</div>` :
                                 `<div class="user-avatar-placeholder">${getStatusEmoji(user.status)}</div>`
                             }
@@ -551,7 +571,7 @@
                 }).join('');
             } catch (error) {
                 console.error('Fetch group error:', error);
-                document.getElementById('groupList').innerHTML = '<div class="loading">⚠️ Ошибка загрузки списка</div>';
+                document.getElementById('groupList').innerHTML = '<div class="loading">⚠️ Ошибка загрузки списка: ' + error.message + '</div>';
             }
         }
 
@@ -575,7 +595,8 @@
                         <div class="user-profile">
                             <div class="user-info-flex">
                                 ${avatarUrl ? 
-                                    `<img class="user-avatar-large" src="${escapeHtml(avatarUrl)}" alt="avatar">` :
+                                    `<img class="user-avatar-large" src="${escapeHtml(avatarUrl)}" alt="avatar" onerror="this.style.display='none'; this.nextElementSibling.style.display='flex'">
+                                    <div class="avatar-placeholder-large" style="display: none;">${userName.charAt(0).toUpperCase()}</div>` :
                                     `<div class="avatar-placeholder-large">${userName.charAt(0).toUpperCase()}</div>`
                                 }
                                 <div>
@@ -588,7 +609,7 @@
                     `;
                     statusButtons.classList.remove('disabled');
                     
-                    // Создаём профиль если нет
+                    // Проверяем профиль
                     const { data: profile } = await supabase
                         .from('profiles')
                         .select('id')
@@ -604,9 +625,10 @@
                                 avatar_url: avatarUrl,
                                 status: '🏠 Дома'
                             });
+                        await fetchGroup();
                     }
                 } else {
-                    // ПОЛЬЗОВАТЕЛЬ НЕ ЗАЛОГИНЕН - ПОКАЗЫВАЕМ КНОПКИ
+                    // ПОЛЬЗОВАТЕЛЬ НЕ ЗАЛОГИНЕН
                     myInfo.innerHTML = `
                         <div class="auth-buttons">
                             <button class="btn btn-email" onclick="window.openEmailModal('register')">
@@ -619,10 +641,6 @@
                                 🚀 Войти через Google
                             </button>
                         </div>
-                        <div class="debug-info">
-                            🔧 Supabase подключен<br>
-                            📍 URL: ${window.location.href}
-                        </div>
                     `;
                     statusButtons.classList.add('disabled');
                 }
@@ -634,8 +652,8 @@
                             🚀 Войти через Google
                         </button>
                     </div>
-                    <div class="debug-info" style="color: red;">
-                        ❌ Ошибка: ${error.message}
+                    <div style="color: red; font-size: 12px; margin-top: 10px;">
+                        Ошибка подключения: ${error.message}
                     </div>
                 `;
             }
@@ -645,7 +663,7 @@
         async function handleAuthRedirect() {
             const { data: { session } } = await supabase.auth.getSession();
             if (session) {
-                console.log('Сессия найдена');
+                console.log('Сессия найдена, пользователь:', session.user.email);
                 await checkUser();
                 await fetchGroup();
             }
