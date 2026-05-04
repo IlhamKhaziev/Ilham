@@ -26,7 +26,16 @@
         }
 
         h2 { margin-top: 0; font-size: 1.2rem; color: #1a1a1a; }
-        #myInfo { color: #666; margin-bottom: 15px; font-size: 0.9rem; }
+        #myInfo { 
+            color: #666; 
+            margin-bottom: 15px; 
+            font-size: 0.9rem;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            flex-wrap: wrap;
+            gap: 10px;
+        }
 
         .status-buttons {
             display: grid;
@@ -55,6 +64,7 @@
         .btn-coffee { background-color: #ffc107; color: #000; }
         .btn-game { background-color: #17a2b8; }
         .btn-home { background-color: #6c757d; }
+        .btn-google { background-color: #4285F4; }
 
         .user-item {
             display: flex;
@@ -71,19 +81,55 @@
             border-radius: 50%;
             margin-right: 12px;
             flex-shrink: 0;
-            background-color: #adb5bd; /* Стандартный цвет для всех */
+            background-color: #adb5bd;
         }
 
         #groupList { margin-top: 10px; }
+
+        .status-buttons.disabled {
+            opacity: 0.5;
+            pointer-events: none;
+        }
+
+        .username {
+            font-weight: 600;
+            color: #1a1a1a;
+        }
+
+        .status-text {
+            color: #666;
+            font-size: 0.85rem;
+        }
+
+        .logout-btn {
+            background-color: #dc3545;
+            color: white;
+            border: none;
+            border-radius: 6px;
+            padding: 5px 12px;
+            cursor: pointer;
+            font-size: 0.85rem;
+            transition: background-color 0.2s;
+        }
+
+        .logout-btn:hover {
+            background-color: #c82333;
+        }
+
+        .loading {
+            text-align: center;
+            color: #666;
+            padding: 20px;
+        }
     </style>
 </head>
 <body>
 
     <div class="card">
         <h2>Мой профиль</h2>
-        <div id="myInfo">Загрузка профиля...</div>
+        <div id="myInfo">Загрузка...</div>
         
-        <div class="status-buttons">
+        <div id="statusButtons" class="status-buttons">
             <button class="btn btn-study" onclick="changeStatus('📚 Учусь')">📚 Учусь</button>
             <button class="btn btn-coffee" onclick="changeStatus('☕ Кофе')">☕ Кофе</button>
             <button class="btn btn-game" onclick="changeStatus('🎮 В игре')">🎮 В игре</button>
@@ -97,83 +143,184 @@
     </div>
 
     <script type="module">
-    import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js/+esm'
+        import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js/+esm'
 
-    const URL = 'https://yyhxkerpjvntoflbmmny.supabase.co';
-    const KEY = 'ВАШ_ПУБЛИЧНЫЙ_ANON_KEY'; // Возьмите его в Project Settings -> API
-    const supabase = createClient(URL, KEY);
+        const URL = 'https://yyhxkerpjvntoflbmmny.supabase.co';
+        const KEY = 'sb_publishable_idalKmPYLEUAMuEl0hjZEQ_CjFIWrRZ';
+        const supabase = createClient(URL, KEY);
 
-    // Вход через Google
-    window.login = async () => {
-        await supabase.auth.signInWithOAuth({
-            provider: 'google',
-            options: { redirectTo: window.location.href }
+        const statusButtonsDiv = document.getElementById('statusButtons');
+        const myInfoContainer = document.getElementById('myInfo');
+
+        // Функция входа через Google
+        window.login = async () => {
+            try {
+                const { data, error } = await supabase.auth.signInWithOAuth({
+                    provider: 'google',
+                    options: {
+                        redirectTo: window.location.origin,
+                        queryParams: {
+                            access_type: 'offline',
+                            prompt: 'consent',
+                        }
+                    }
+                });
+                if (error) {
+                    console.error("Ошибка входа:", error.message);
+                    alert("Ошибка входа: " + error.message);
+                }
+            } catch (error) {
+                console.error("Ошибка:", error);
+                alert("Произошла ошибка при входе");
+            }
+        };
+
+        // Функция выхода
+        window.logout = async () => {
+            try {
+                const { error } = await supabase.auth.signOut();
+                if (error) throw error;
+                location.reload();
+            } catch (error) {
+                console.error("Ошибка выхода:", error.message);
+                alert("Ошибка при выходе");
+            }
+        };
+
+        // Функция изменения статуса
+        window.changeStatus = async (text) => {
+            try {
+                const { data: { user }, error: userError } = await supabase.auth.getUser();
+                
+                if (userError) throw userError;
+                
+                if (!user) {
+                    alert("Пожалуйста, войдите в аккаунт!");
+                    return;
+                }
+
+                const { error } = await supabase
+                    .from('profiles')
+                    .upsert({ 
+                        id: user.id, 
+                        username: user.user_metadata.full_name || user.email,
+                        status: text,
+                        updated_at: new Date()
+                    });
+
+                if (error) {
+                    console.error("Ошибка обновления:", error);
+                    alert("Ошибка: " + error.message);
+                } else {
+                    await fetchGroup();
+                }
+            } catch (error) {
+                console.error("Ошибка:", error);
+                alert("Произошла ошибка при обновлении статуса");
+            }
+        };
+
+        // Функция получения списка пользователей
+        async function fetchGroup() {
+            try {
+                const { data, error } = await supabase
+                    .from('profiles')
+                    .select('id, username, status')
+                    .order('username', { ascending: true });
+
+                if (error) throw error;
+
+                const list = document.getElementById('groupList');
+                
+                if (!data || data.length === 0) {
+                    list.innerHTML = '<div class="loading">Нет пользователей</div>';
+                    return;
+                }
+
+                list.innerHTML = data.map(user => `
+                    <div class="user-item">
+                        <div class="status-dot"></div>
+                        <div style="flex-grow: 1;">
+                            <div class="username">${escapeHtml(user.username || 'Аноним')}</div>
+                            <div class="status-text">${escapeHtml(user.status || 'Нет статуса')}</div>
+                        </div>
+                    </div>
+                `).join('');
+            } catch (error) {
+                console.error("Ошибка загрузки списка:", error);
+                document.getElementById('groupList').innerHTML = '<div class="loading">Ошибка загрузки списка</div>';
+            }
+        }
+
+        // Функция для безопасного экранирования HTML
+        function escapeHtml(text) {
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
+
+        // Функция проверки авторизации
+        async function checkUser() {
+            try {
+                const { data: { user }, error } = await supabase.auth.getUser();
+
+                if (error) throw error;
+
+                if (user) {
+                    myInfoContainer.innerHTML = `
+                        <span>Вы зашли как: <strong>${escapeHtml(user.user_metadata.full_name || user.email)}</strong></span>
+                        <button class="logout-btn" onclick="logout()">Выйти</button>
+                    `;
+                    statusButtonsDiv.classList.remove('disabled');
+                    
+                    // Проверяем, есть ли профиль пользователя, если нет - создаем
+                    const { data: profile, error: profileError } = await supabase
+                        .from('profiles')
+                        .select('id')
+                        .eq('id', user.id)
+                        .single();
+
+                    if (profileError && profileError.code === 'PGRST116') {
+                        // Создаем профиль если его нет
+                        await supabase
+                            .from('profiles')
+                            .insert({ 
+                                id: user.id, 
+                                username: user.user_metadata.full_name || user.email,
+                                status: '🏠 Дома'
+                            });
+                    }
+                } else {
+                    myInfoContainer.innerHTML = `
+                        <button class="btn btn-google" onclick="login()" style="width: 100%;">
+                            Войти через Google
+                        </button>
+                    `;
+                    statusButtonsDiv.classList.add('disabled');
+                }
+            } catch (error) {
+                console.error("Ошибка проверки пользователя:", error);
+                myInfoContainer.innerHTML = `
+                    <button class="btn btn-google" onclick="login()" style="width: 100%;">
+                        Войти через Google
+                    </button>
+                `;
+                statusButtonsDiv.classList.add('disabled');
+            }
+        }
+
+        // Обработчик изменения состояния авторизации
+        supabase.auth.onAuthStateChange((event, session) => {
+            if (event === 'SIGNED_IN' || event === 'SIGNED_OUT') {
+                checkUser();
+                fetchGroup();
+            }
         });
-    };
 
-    // Выход
-    window.logout = async () => {
-        await supabase.auth.signOut();
-        location.reload();
-    };
-
-    // Смена статуса
-    window.changeStatus = async (text) => {
-        const { data: { user } } = await supabase.auth.getUser();
-        
-        if (!user) {
-            alert("Сначала войдите через Google!");
-            return;
-        }
-
-        // Сохраняем в базу: если записи нет - создаст, если есть - обновит
-        const { error } = await supabase
-            .from('profiles')
-            .upsert({ 
-                id: user.id, 
-                username: user.user_metadata.full_name || user.email,
-                status: text 
-            });
-
-        if (error) alert("Ошибка БД: " + error.message);
+        // Инициализация
+        checkUser();
         fetchGroup();
-    };
-
-    async function fetchGroup() {
-        const { data, error } = await supabase
-            .from('profiles')
-            .select('*')
-            .order('username');
-
-        if (error) return;
-
-        const list = document.getElementById('groupList');
-        list.innerHTML = data.map(user => `
-            <div class="user-item">
-                <div class="status-dot"></div>
-                <div>
-                    <strong>${user.username}</strong><br>
-                    <small>${user.status || 'Просто смотрит'}</small>
-                </div>
-            </div>
-        `).join('');
-    }
-
-    // Проверка: залогинен ли пользователь прямо сейчас?
-    async function checkUser() {
-        const { data: { user } } = await supabase.auth.getUser();
-        const info = document.getElementById('myInfo');
-
-        if (user) {
-            info.innerHTML = `Привет, <b>${user.user_metadata.full_name}</b> <a href="#" onclick="logout()">Выйти</a>`;
-        } else {
-            info.innerHTML = `<button onclick="login()" style="width:100%; padding:10px; cursor:pointer">Войти через Google</button>`;
-        }
-    }
-
-    checkUser();
-    fetchGroup();
-    setInterval(fetchGroup, 5000); // Обновлять список каждые 5 сек
-</script>
+        setInterval(fetchGroup, 5000);
+    </script>
 </body>
 </html>
