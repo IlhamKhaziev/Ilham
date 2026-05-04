@@ -33,12 +33,6 @@
             box-shadow: 0 10px 40px rgba(0,0,0,0.1);
             padding: 28px;
             margin-bottom: 20px;
-            transition: transform 0.2s, box-shadow 0.2s;
-        }
-
-        .card:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 15px 50px rgba(0,0,0,0.15);
         }
 
         h2 {
@@ -63,15 +57,17 @@
             border-radius: 12px;
             padding: 15px;
             margin-bottom: 20px;
-            font-size: 0.95rem;
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            flex-wrap: wrap;
-            gap: 12px;
         }
 
         .user-profile {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            justify-content: space-between;
+            flex-wrap: wrap;
+        }
+
+        .user-info-flex {
             display: flex;
             align-items: center;
             gap: 12px;
@@ -84,9 +80,25 @@
             object-fit: cover;
         }
 
+        .avatar-placeholder-large {
+            width: 48px;
+            height: 48px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 24px;
+        }
+
         .user-name {
             font-weight: 600;
             color: #1a1a1a;
+        }
+
+        .user-email {
+            font-size: 12px;
+            color: #6c757d;
         }
 
         .status-buttons {
@@ -114,10 +126,6 @@
             filter: brightness(1.05);
         }
 
-        .btn:active {
-            transform: translateY(0);
-        }
-
         .btn-study { background: linear-gradient(135deg, #11998e 0%, #38ef7d 100%); color: white; }
         .btn-coffee { background: linear-gradient(135deg, #f2994a 0%, #f2c94c 100%); color: #333; }
         .btn-game { background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%); color: white; }
@@ -130,7 +138,6 @@
             align-items: center;
             padding: 14px 0;
             border-bottom: 1px solid #e9ecef;
-            transition: background 0.2s;
         }
 
         .user-item:hover {
@@ -186,12 +193,6 @@
             cursor: pointer;
             font-size: 0.85rem;
             font-weight: 500;
-            transition: all 0.2s;
-        }
-
-        .logout-btn:hover {
-            transform: translateY(-1px);
-            filter: brightness(1.05);
         }
 
         .status-buttons.disabled {
@@ -215,7 +216,16 @@
             margin-left: 10px;
         }
 
-        /* Модальное окно */
+        .auth-buttons {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+
+        .auth-buttons .btn {
+            width: 100%;
+        }
+
         .modal {
             display: none;
             position: fixed;
@@ -235,23 +245,10 @@
             padding: 32px;
             max-width: 400px;
             width: 90%;
-            animation: slideIn 0.3s ease;
-        }
-
-        @keyframes slideIn {
-            from {
-                transform: translateY(-50px);
-                opacity: 0;
-            }
-            to {
-                transform: translateY(0);
-                opacity: 1;
-            }
         }
 
         .modal-content h3 {
             margin-bottom: 20px;
-            color: #1a1a1a;
         }
 
         .modal-content input {
@@ -260,12 +257,6 @@
             margin: 10px 0;
             border: 1px solid #ddd;
             border-radius: 8px;
-            font-size: 0.95rem;
-        }
-
-        .modal-content input:focus {
-            outline: none;
-            border-color: #667eea;
         }
 
         .btn-modal {
@@ -288,15 +279,14 @@
             color: white;
         }
 
-        .auth-buttons {
-            display: flex;
-            flex-direction: column;
-            gap: 10px;
-            width: 100%;
-        }
-
-        .auth-buttons .btn {
-            width: 100%;
+        .debug-info {
+            font-size: 11px;
+            color: #999;
+            margin-top: 10px;
+            padding: 8px;
+            background: #f0f0f0;
+            border-radius: 6px;
+            word-break: break-all;
         }
     </style>
 </head>
@@ -307,10 +297,10 @@
             <div id="myInfo">Загрузка...</div>
             
             <div id="statusButtons" class="status-buttons">
-                <button class="btn btn-study" onclick="changeStatus('📚 Учусь')">📚 Учусь</button>
-                <button class="btn btn-coffee" onclick="changeStatus('☕ Пью кофе')">☕ Кофе</button>
-                <button class="btn btn-game" onclick="changeStatus('🎮 В игре')">🎮 В игре</button>
-                <button class="btn btn-home" onclick="changeStatus('🏠 Дома')">🏠 Дома</button>
+                <button class="btn btn-study" onclick="window.changeStatus('📚 Учусь')">📚 Учусь</button>
+                <button class="btn btn-coffee" onclick="window.changeStatus('☕ Пью кофе')">☕ Кофе</button>
+                <button class="btn btn-game" onclick="window.changeStatus('🎮 В игре')">🎮 В игре</button>
+                <button class="btn btn-home" onclick="window.changeStatus('🏠 Дома')">🏠 Дома</button>
             </div>
         </div>
 
@@ -320,14 +310,14 @@
         </div>
     </div>
 
-    <!-- Модальное окно для email регистрации/входа -->
+    <!-- Модальное окно для email -->
     <div id="emailModal" class="modal">
         <div class="modal-content">
             <h3 id="modalTitle">📝 Регистрация</h3>
-            <input type="email" id="emailInput" placeholder="Email" autocomplete="off">
+            <input type="email" id="emailInput" placeholder="Email">
             <input type="password" id="passwordInput" placeholder="Пароль (мин. 6 символов)">
             <button class="btn-modal btn-primary" id="modalSubmitBtn">Зарегистрироваться</button>
-            <button class="btn-modal btn-secondary" onclick="closeEmailModal()">Отмена</button>
+            <button class="btn-modal btn-secondary" onclick="window.closeEmailModal()">Отмена</button>
         </div>
     </div>
 
@@ -339,7 +329,9 @@
         const SUPABASE_KEY = 'sb_publishable_idalKmPYLEUAMuEl0hjZEQ_CjFIWrRZ';
         const supabase = createClient(SUPABASE_URL, SUPABASE_KEY);
 
-        // Получение полного URL текущей страницы
+        console.log('Supabase инициализирован');
+
+        // Получение текущего URL
         const getCurrentUrl = () => {
             let url = window.location.href;
             url = url.split('#')[0];
@@ -347,13 +339,14 @@
             return url;
         };
 
-        // ========== АВТОРИЗАЦИЯ ==========
-        
-        // Вход через Google
+        // ========== GOOGLE ВХОД ==========
         window.loginWithGoogle = async () => {
+            console.log('loginWithGoogle вызван');
             try {
                 const redirectUrl = getCurrentUrl();
-                const { error } = await supabase.auth.signInWithOAuth({
+                console.log('Redirect URL:', redirectUrl);
+                
+                const { data, error } = await supabase.auth.signInWithOAuth({
                     provider: 'google',
                     options: {
                         redirectTo: redirectUrl,
@@ -363,35 +356,27 @@
                         }
                     }
                 });
-                if (error) throw error;
+                
+                if (error) {
+                    console.error('Ошибка:', error);
+                    alert('Ошибка входа: ' + error.message);
+                } else {
+                    console.log('Перенаправление на Google...', data);
+                }
             } catch (error) {
-                console.error('Google login error:', error);
-                alert('Ошибка входа: ' + error.message);
+                console.error('Исключение:', error);
+                alert('Ошибка: ' + error.message);
             }
         };
 
-        // Выход
-        window.logout = async () => {
-            try {
-                const { error } = await supabase.auth.signOut();
-                if (error) throw error;
-                window.location.reload();
-            } catch (error) {
-                console.error('Logout error:', error);
-                alert('Ошибка выхода: ' + error.message);
-            }
-        };
-
-        // Открытие модального окна для email
+        // ========== EMAIL АВТОРИЗАЦИЯ ==========
         window.openEmailModal = (type) => {
             const modal = document.getElementById('emailModal');
             const title = document.getElementById('modalTitle');
             const submitBtn = document.getElementById('modalSubmitBtn');
-            const emailInput = document.getElementById('emailInput');
-            const passwordInput = document.getElementById('passwordInput');
             
-            emailInput.value = '';
-            passwordInput.value = '';
+            document.getElementById('emailInput').value = '';
+            document.getElementById('passwordInput').value = '';
             
             if (type === 'register') {
                 title.textContent = '📝 Регистрация';
@@ -410,7 +395,6 @@
             document.getElementById('emailModal').style.display = 'none';
         };
 
-        // Регистрация по email
         async function registerWithEmail() {
             const email = document.getElementById('emailInput').value;
             const password = document.getElementById('passwordInput').value;
@@ -449,7 +433,6 @@
             }
         }
 
-        // Вход по email
         async function loginWithEmail() {
             const email = document.getElementById('emailInput').value;
             const password = document.getElementById('passwordInput').value;
@@ -468,15 +451,24 @@
                 if (error) throw error;
                 
                 closeEmailModal();
-                await checkUser();
-                await fetchGroup();
             } catch (error) {
                 alert('Ошибка входа: ' + error.message);
             }
         }
 
+        // ========== ВЫХОД ==========
+        window.logout = async () => {
+            try {
+                const { error } = await supabase.auth.signOut();
+                if (error) throw error;
+                window.location.reload();
+            } catch (error) {
+                console.error('Logout error:', error);
+                alert('Ошибка выхода: ' + error.message);
+            }
+        };
+
         // ========== СТАТУСЫ ==========
-        
         window.changeStatus = async (status) => {
             try {
                 const { data: { user }, error: userError } = await supabase.auth.getUser();
@@ -505,7 +497,6 @@
             }
         };
 
-        // Получение эмодзи для статуса
         const getStatusEmoji = (status) => {
             if (status?.includes('Учусь')) return '📚';
             if (status?.includes('Кофе')) return '☕';
@@ -514,7 +505,14 @@
             return '💬';
         };
 
-        // Загрузка списка пользователей с аватарками
+        function escapeHtml(text) {
+            if (!text) return '';
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
+
+        // ========== ЗАГРУЗКА СПИСКА ==========
         async function fetchGroup() {
             try {
                 const { data: profiles, error } = await supabase
@@ -540,7 +538,8 @@
                     return `
                         <div class="user-item">
                             ${hasAvatar ? 
-                                `<img class="user-avatar" src="${escapeHtml(user.avatar_url)}" alt="avatar">` :
+                                `<img class="user-avatar" src="${escapeHtml(user.avatar_url)}" onerror="this.style.display='none'; this.nextSibling.style.display='flex'" alt="avatar">
+                                <div class="user-avatar-placeholder" style="display: none;">${getStatusEmoji(user.status)}</div>` :
                                 `<div class="user-avatar-placeholder">${getStatusEmoji(user.status)}</div>`
                             }
                             <div class="user-info">
@@ -556,14 +555,7 @@
             }
         }
 
-        function escapeHtml(text) {
-            if (!text) return '';
-            const div = document.createElement('div');
-            div.textContent = text;
-            return div.innerHTML;
-        }
-
-        // Проверка состояния пользователя
+        // ========== ПРОВЕРКА ПОЛЬЗОВАТЕЛЯ ==========
         async function checkUser() {
             try {
                 const { data: { user }, error } = await supabase.auth.getUser();
@@ -574,26 +566,29 @@
                 const myInfo = document.getElementById('myInfo');
 
                 if (user) {
-                    // Пользователь авторизован - показываем аватарку и имя
+                    // ПОЛЬЗОВАТЕЛЬ ЗАЛОГИНЕН
                     const avatarUrl = user.user_metadata.avatar_url;
                     const userName = user.user_metadata.full_name || user.email;
+                    const userEmail = user.email;
                     
                     myInfo.innerHTML = `
                         <div class="user-profile">
-                            ${avatarUrl ? 
-                                `<img class="user-avatar-large" src="${escapeHtml(avatarUrl)}" alt="avatar">` :
-                                `<div class="user-avatar-large" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); display: flex; align-items: center; justify-content: center; font-size: 1.5rem;">${userName.charAt(0).toUpperCase()}</div>`
-                            }
-                            <div>
-                                <div class="user-name">${escapeHtml(userName)}</div>
-                                <small style="color: #6c757d;">${user.email}</small>
+                            <div class="user-info-flex">
+                                ${avatarUrl ? 
+                                    `<img class="user-avatar-large" src="${escapeHtml(avatarUrl)}" alt="avatar">` :
+                                    `<div class="avatar-placeholder-large">${userName.charAt(0).toUpperCase()}</div>`
+                                }
+                                <div>
+                                    <div class="user-name">${escapeHtml(userName)}</div>
+                                    <div class="user-email">${escapeHtml(userEmail)}</div>
+                                </div>
                             </div>
+                            <button class="logout-btn" onclick="window.logout()">🚪 Выйти</button>
                         </div>
-                        <button class="logout-btn" onclick="logout()">🚪 Выйти</button>
                     `;
                     statusButtons.classList.remove('disabled');
                     
-                    // Создаём профиль если его нет
+                    // Создаём профиль если нет
                     const { data: profile } = await supabase
                         .from('profiles')
                         .select('id')
@@ -609,45 +604,54 @@
                                 avatar_url: avatarUrl,
                                 status: '🏠 Дома'
                             });
-                    } else if (profile && avatarUrl && profile.avatar_url !== avatarUrl) {
-                        // Обновляем аватарку если изменилась
-                        await supabase
-                            .from('profiles')
-                            .update({ avatar_url: avatarUrl })
-                            .eq('id', user.id);
                     }
                 } else {
-                    // Пользователь не авторизован - показываем кнопки входа
+                    // ПОЛЬЗОВАТЕЛЬ НЕ ЗАЛОГИНЕН - ПОКАЗЫВАЕМ КНОПКИ
                     myInfo.innerHTML = `
                         <div class="auth-buttons">
-                            <button class="btn btn-email" onclick="openEmailModal('register')">
+                            <button class="btn btn-email" onclick="window.openEmailModal('register')">
                                 📝 Регистрация
                             </button>
-                            <button class="btn btn-email" onclick="openEmailModal('login')">
+                            <button class="btn btn-email" onclick="window.openEmailModal('login')">
                                 🔐 Вход по email
                             </button>
-                            <button class="btn btn-google" onclick="loginWithGoogle()">
+                            <button class="btn btn-google" onclick="window.loginWithGoogle()">
                                 🚀 Войти через Google
                             </button>
+                        </div>
+                        <div class="debug-info">
+                            🔧 Supabase подключен<br>
+                            📍 URL: ${window.location.href}
                         </div>
                     `;
                     statusButtons.classList.add('disabled');
                 }
             } catch (error) {
                 console.error('Check user error:', error);
+                document.getElementById('myInfo').innerHTML = `
+                    <div class="auth-buttons">
+                        <button class="btn btn-google" onclick="window.loginWithGoogle()">
+                            🚀 Войти через Google
+                        </button>
+                    </div>
+                    <div class="debug-info" style="color: red;">
+                        ❌ Ошибка: ${error.message}
+                    </div>
+                `;
             }
         }
 
-        // Обработка сессии после редиректа
+        // ========== СЕССИЯ ==========
         async function handleAuthRedirect() {
             const { data: { session } } = await supabase.auth.getSession();
             if (session) {
+                console.log('Сессия найдена');
                 await checkUser();
                 await fetchGroup();
             }
         }
 
-        // Подписка на изменения в реальном времени
+        // ========== ПОДПИСКА ==========
         function subscribeToChanges() {
             supabase
                 .channel('profiles_changes')
@@ -660,16 +664,17 @@
                 .subscribe();
         }
 
-        // Закрытие модального окна по клику вне его
+        // ========== ЗАКРЫТИЕ МОДАЛКИ ==========
         window.onclick = (event) => {
             const modal = document.getElementById('emailModal');
             if (event.target === modal) {
-                closeEmailModal();
+                window.closeEmailModal();
             }
         };
 
-        // Инициализация
+        // ========== ЗАПУСК ==========
         async function init() {
+            console.log('Инициализация приложения...');
             await handleAuthRedirect();
             await checkUser();
             await fetchGroup();
