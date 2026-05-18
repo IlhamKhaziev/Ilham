@@ -2,8 +2,8 @@
 <html lang="ru">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Учебная группа — онлайн, время учёбы, общий чат</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
+    <title>Учебная группа — онлайн, время учёбы, общий чат (Google вход)</title>
     <style>
         * {
             margin: 0;
@@ -206,7 +206,6 @@
             border-radius: 20px;
         }
 
-        /* Чат */
         .chat-messages {
             max-height: 320px;
             overflow-y: auto;
@@ -270,10 +269,20 @@
             cursor: pointer;
         }
 
-        .auth-buttons {
+        .auth-button {
+            background: #4285F4;
+            color: white;
+            border: none;
+            border-radius: 60px;
+            padding: 14px 20px;
+            font-size: 1rem;
+            font-weight: 600;
+            cursor: pointer;
             display: flex;
-            flex-direction: column;
+            align-items: center;
+            justify-content: center;
             gap: 10px;
+            width: 100%;
         }
 
         .disabled-buttons {
@@ -365,6 +374,7 @@
             const elapsed = Math.floor((Date.now() - currentStudyStart) / 1000);
             timerSpan.innerText = `📖 ${formatTimerHHMMSS(elapsed)}`;
             timerSpan.style.background = "#10b981";
+            timerSpan.style.color = "white";
         } else {
             timerSpan.innerText = `⏸️ не учится`;
             timerSpan.style.background = "#334155";
@@ -386,7 +396,10 @@
             .select('status, total_study_seconds, study_session_start')
             .eq('id', currentUser.id)
             .single();
-        if (error) return;
+        if (error) {
+            console.warn("Не удалось загрузить состояние учёбы", error);
+            return;
+        }
         totalStudySeconds = data.total_study_seconds || 0;
         if (data.status === "📚 Учусь" && data.study_session_start) {
             const start = new Date(data.study_session_start);
@@ -511,7 +524,7 @@
     }
 
     async function sendMessage(text) {
-        if (!currentUser) { alert("Войдите, чтобы писать в чат"); return; }
+        if (!currentUser) { alert("Войдите через Google, чтобы писать в чат"); return; }
         if (!text.trim()) return;
         const username = currentUser.user_metadata?.full_name || currentUser.email?.split('@')[0] || 'Пользователь';
         const { error } = await supabase.from('messages').insert({
@@ -534,7 +547,16 @@
             .subscribe();
     }
 
-    // Авторизация + инициализация
+    // ТОЛЬКО ВХОД ЧЕРЕЗ GOOGLE
+    async function loginWithGoogle() {
+        const { error } = await supabase.auth.signInWithOAuth({
+            provider: 'google',
+            options: { redirectTo: window.location.href }
+        });
+        if (error) alert("Ошибка входа: " + error.message);
+    }
+
+    // Инициализация UI в зависимости от авторизации
     async function initAuthUI() {
         const { data: { user } } = await supabase.auth.getUser();
         currentUser = user;
@@ -542,12 +564,13 @@
         const statusBtnsDiv = document.getElementById('statusButtons');
         
         if (user) {
-            // залогинен
+            // Залогинен через Google
             const userName = user.user_metadata?.full_name || user.email?.split('@')[0] || 'Ученик';
+            const avatarUrl = user.user_metadata?.avatar_url;
             myInfoDiv.innerHTML = `
                 <div class="profile-row">
                     <div class="user-details">
-                        <div class="avatar-large">${userName.charAt(0).toUpperCase()}</div>
+                        ${avatarUrl ? `<img src="${avatarUrl}" style="width:52px; height:52px; border-radius:50%; object-fit:cover;" onerror="this.style.display='none'">` : `<div class="avatar-large">${userName.charAt(0).toUpperCase()}</div>`}
                         <div><div class="user-name">${escapeHtml(userName)}</div><div class="user-email">${escapeHtml(user.email)}</div></div>
                     </div>
                     <button class="logout-btn" id="logoutBtn">Выйти</button>
@@ -580,52 +603,38 @@
                 await supabase.from('profiles').insert({
                     id: user.id,
                     username: userName,
-                    avatar_url: user.user_metadata?.avatar_url,
+                    avatar_url: avatarUrl,
                     status: "🏠 Дома",
                     total_study_seconds: 0,
                     last_seen: new Date().toISOString()
                 });
             } else {
-                // убедимся что last_seen обновляется
                 await updateLastSeen();
             }
         } else {
-            // не залогинен
+            // Не авторизован — показываем только кнопку входа через Google
             myInfoDiv.innerHTML = `
-                <div class="auth-buttons">
-                    <button class="btn" id="googleLoginBtn" style="background:#4285F4; color:white;">🚀 Войти через Google</button>
-                    <button class="btn" id="emailRegisterBtn" style="background:#667eea; color:white;">📝 Регистрация (email)</button>
-                    <button class="btn" id="emailLoginBtn" style="background:#34A853; color:white;">🔐 Вход по email</button>
+                <div style="text-align:center; padding: 12px;">
+                    <button class="auth-button" id="googleOnlyBtn">
+                        🚀 Войти через Google
+                    </button>
+                    <div class="alert-banner" style="margin-top:16px;">
+                        🔐 Только Google-аккаунт. После входа станут доступны статусы, чат и статистика учёбы.
+                    </div>
                 </div>
             `;
             statusBtnsDiv.classList.add('disabled-buttons');
-            statusBtnsDiv.innerHTML = `<div style="color:gray;">Статусы доступны после входа</div>`;
-            document.getElementById('googleLoginBtn')?.addEventListener('click', () => supabase.auth.signInWithOAuth({ provider: 'google', options: { redirectTo: window.location.href } }));
-            document.getElementById('emailRegisterBtn')?.addEventListener('click', () => openEmailModal('register'));
-            document.getElementById('emailLoginBtn')?.addEventListener('click', () => openEmailModal('login'));
+            statusBtnsDiv.innerHTML = `<div style="color:gray; text-align:center;">Статусы доступны после входа</div>`;
+            document.getElementById('googleOnlyBtn')?.addEventListener('click', loginWithGoogle);
+            // очищаем группу / чат (показываем заглушки)
+            document.getElementById('groupList').innerHTML = '<div class="alert-banner">Войдите, чтобы видеть участников группы</div>';
+            document.getElementById('chatMessages').innerHTML = '<div class="message">💬 Войдите, чтобы читать и писать в чат</div>';
         }
-        fetchGroupList();
+        if (user) {
+            fetchGroupList();
+        }
         if (timerInterval) clearInterval(timerInterval);
         timerInterval = setInterval(() => updateStudyUI(), 1000);
-    }
-
-    // модалка для email (простая)
-    function openEmailModal(type) {
-        const email = prompt("Введите email:");
-        if (!email) return;
-        const password = prompt("Введите пароль (минимум 6 символов):");
-        if (!password || password.length < 6) { alert("Пароль минимум 6 символов"); return; }
-        if (type === 'register') {
-            supabase.auth.signUp({ email, password }).then(({ error }) => {
-                if (error) alert("Ошибка: " + error.message);
-                else alert("Регистрация успешна! Проверьте почту для подтверждения (если требуется).");
-            });
-        } else {
-            supabase.auth.signInWithPassword({ email, password }).then(({ error }) => {
-                if (error) alert("Ошибка входа: " + error.message);
-                else window.location.reload();
-            });
-        }
     }
 
     function escapeHtml(str) {
@@ -638,9 +647,9 @@
         });
     }
 
-    // Проверка и создание нужных колонок / таблиц (выводим в консоль инструкцию если их нет)
+    // Проверка и создание нужных колонок / таблиц (выводим инструкцию в консоль)
     async function ensureTablesAndColumns() {
-        // Проверяем наличие колонок last_seen, total_study_seconds, study_session_start в profiles
+        // Проверяем наличие колонок last_seen и других в profiles
         const { error: testLastSeen } = await supabase.from('profiles').select('last_seen').limit(1);
         if (testLastSeen && testLastSeen.message?.includes('last_seen')) {
             console.warn("⚠️ В таблице profiles отсутствуют нужные колонки. Выполните SQL в Supabase SQL Editor:");
@@ -670,7 +679,7 @@
         }
     }
 
-    // Основной запуск
+    // Обработчик изменения состояния аутентификации
     supabase.auth.onAuthStateChange((event, session) => {
         if (event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED') {
             window.location.reload();
@@ -678,7 +687,7 @@
         if (event === 'SIGNED_OUT') window.location.reload();
     });
 
-    window.sendMessage = sendMessage;
+    // Навешиваем отправку чата
     document.getElementById('sendChatBtn')?.addEventListener('click', () => {
         const input = document.getElementById('chatInput');
         sendMessage(input.value);
@@ -687,11 +696,14 @@
         if (e.key === 'Enter') sendMessage(e.target.value);
     });
 
+    // Запуск
     ensureTablesAndColumns();
     initAuthUI().then(() => {
-        loadChatMessages();
-        subscribeChat();
-        setInterval(fetchGroupList, 7000);
+        if (currentUser) {
+            loadChatMessages();
+            subscribeChat();
+            setInterval(fetchGroupList, 7000);
+        }
     });
 </script>
 </body>
