@@ -23,6 +23,7 @@
             width: 100%;
             max-width: 500px;
             margin-bottom: 20px;
+            box-sizing: border-box;
         }
 
         h2 { margin-top: 0; font-size: 1.2rem; color: #1a1a1a; }
@@ -62,11 +63,17 @@
         .user-item {
             display: flex;
             align-items: center;
-            padding: 10px 0;
+            justify-content: space-between;
+            padding: 12px 0;
             border-bottom: 1px solid #eee;
         }
 
         .user-item:last-child { border-bottom: none; }
+
+        .user-info-block {
+            display: flex;
+            align-items: center;
+        }
 
         .status-dot {
             width: 12px;
@@ -74,6 +81,40 @@
             border-radius: 50%;
             margin-right: 12px;
             flex-shrink: 0;
+            position: relative;
+        }
+
+        /* Индикатор онлайн (зеленое кольцо или точка) */
+        .status-dot.online::after {
+            content: '';
+            position: absolute;
+            top: -2px;
+            left: -2px;
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            border: 2px solid #28a745;
+            animation: pulse 2s infinite;
+        }
+
+        @keyframes pulse {
+            0% { transform: scale(0.9); opacity: 1; }
+            100% { transform: scale(1.4); opacity: 0; }
+        }
+
+        .user-meta {
+            text-align: right;
+            font-size: 0.85rem;
+            color: #666;
+        }
+
+        .time-counter {
+            font-weight: bold;
+            color: #007bff;
+            display: flex;
+            align-items: center;
+            justify-content: flex-end;
+            gap: 4px;
         }
 
         #groupList { margin-top: 10px; }
@@ -102,9 +143,8 @@
     </div>
 
     <div class="card">
-        <h2>Монитор группы</h2>
-        <div id="groupList">
-            </div>
+        <h2>👥 Монитор группы</h2>
+        <div id="groupList">Загрузка списка группы...</div>
     </div>
 
     <script type="module">
@@ -115,11 +155,30 @@
         const supabase = createClient(URL, KEY);
 
         const MY_ID = '1d4576d0-2cf3-434c-9ed1-6322f2d66dea';
+        
+        let usersData = [];
+        let onlineUsers = {};
+        let studyTimers = {};
+
+        // Форматирование секунд в красивую строку (0ч 0м 23с)
+        function formatTime(totalSeconds) {
+            const hours = Math.floor(totalSeconds / 3600);
+            const minutes = Math.floor((totalSeconds % 3600) / 60);
+            const seconds = totalSeconds % 60;
+            return `${hours}ч ${minutes}м ${seconds}с`;
+        }
 
         window.changeStatus = async (text, color) => {
+            // Если переходим в статус "Учусь", сбрасываем локальный счетчик или продолжаем текущий
+            const updates = { 
+                status: text, 
+                color: color,
+                last_status_change: new Date().toISOString() 
+            };
+
             const { error } = await supabase
                 .from('profiles')
-                .update({ status: text, color: color })
+                .update(updates)
                 .eq('id', MY_ID);
 
             if (error) {
@@ -138,23 +197,97 @@
 
             if (error) return console.error(error);
 
-            const list = document.getElementById('groupList');
-            list.innerHTML = data.map(user => `
-                <div class="user-item">
-                    <div class="status-dot" style="background: ${user.color || '#ccc'}"></div>
-                    <div style="flex-grow: 1;">
-                        <strong>${user.username}</strong><br>
-                        <small style="color: #666;">${user.status || 'Статус не задан'}</small>
-                    </div>
-                </div>
-            `).join('');
+            usersData = data;
+            renderGroupList();
 
             const me = data.find(u => u.id === MY_ID);
             if (me) document.getElementById('myInfo').innerText = `Вы зашли как: ${me.username}`;
         }
 
+        function renderGroupList() {
+            const list = document.getElementById('groupList');
+            if (!usersData.length) return;
+
+            list.innerHTML = usersData.map(user => {
+                const isOnline = !!onlineUsers[user.id];
+                const isLearning = user.status === '📚 Учусь';
+                
+                // Считаем время, проведенное в учебе
+                let initialSeconds = 0;
+                if (isLearning && user.last_status_change) {
+                    const changeTime = new Date(user.last_status_change).getTime();
+                    initialSeconds = Math.floor((Date.now() - changeTime) / 1000);
+                    if (initialSeconds < 0) initialSeconds = 0;
+                    studyTimers[user.id] = initialSeconds; // сохраняем для тиканья
+                } else {
+                    studyTimers[user.id] = 0;
+                }
+
+                return `
+                    <div class="user-item" id="user-${user.id}">
+                        <div class="user-info-block">
+                            <div class="status-dot ${isOnline ? 'online' : ''}" style="background: ${user.color || '#ccc'}"></div>
+                            <div>
+                                <strong>${user.username}</strong><br>
+                                <small style="color: #666;">${user.status || 'Статус не задан'}</small>
+                            </div>
+                        </div>
+                        <div class="user-meta">
+                            <div>${isOnline ? '🟢 онлайн' : '⚫ оффлайн'}</div>
+                            ${isLearning ? `
+                                <div class="time-counter" id="timer-${user.id}">
+                                    ⏱️ <span>${formatTime(studyTimers[user.id])}</span>
+                                </div >
+                            ` : ''}
+                        </div>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        // Секундомер реального времени для UI
+        setInterval(() => {
+            usersData.forEach(user => {
+                if (user.status === '📚 Учусь' && studyTimers[user.id] !== undefined) {
+                    studyTimers[user.id]++;
+                    const timerTextSpan = document.querySelector(`#timer-${user.id} span`);
+                    if (timerTextSpan) {
+                        timerTextSpan.innerText = formatTime(studyTimers[user.id]);
+                    }
+                }
+            });
+        }, 1000);
+
+        // --- SUPABASE PRESENCE (ОТСЛЕЖИВАНИЕ ОНЛАЙНА) ---
+        const room = supabase.channel('online-users');
+
+        room
+            .on('presence', { event: 'sync' }, () => {
+                const newState = room.presenceState();
+                onlineUsers = {};
+                
+                // Переводим массив присутствия в удобный объект по ID пользователей
+                Object.keys(newState).forEach(id => {
+                    const userPresenceArray = newState[id];
+                    if (userPresenceArray && userPresenceArray.length > 0) {
+                        const userId = userPresenceArray[0].user_id;
+                        onlineUsers[userId] = true;
+                    }
+                });
+                renderGroupList();
+            })
+            .subscribe(async (status) => {
+                if (status === 'SUBSCRIBED') {
+                    // Отправляем информацию о том, что текущий юзер в сети
+                    await room.track({ user_id: MY_ID, online_at: new Date().toISOString() });
+                }
+            });
+
+        // Первичная загрузка данных
         fetchGroup();
-        setInterval(fetchGroup, 5000);
+        
+        // Раз в 10 секунд актуализируем данные из базы (например, если кто-то сменил статус)
+        setInterval(fetchGroup, 10000);
     </script>
 </body>
 </html>
