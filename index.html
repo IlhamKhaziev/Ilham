@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
-    <title>Учебная группа — Онлайн + Время учёбы + Чат (Google вход)</title>
+    <title>Учебная группа — Онлайн + Время учёбы + Чат (Google)</title>
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
         body {
@@ -263,19 +263,17 @@
 <script type="module">
     import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js/+esm'
 
-    // ---------- КОНФИГУРАЦИЯ (ВАША) ----------
     const SUPABASE_URL = 'https://ebthetkjsjztqrphpezd.supabase.co';
     const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImVidGhldGtqc2p6dHFycGhwZXpkIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzY2NjIzMTgsImV4cCI6MjA5MjIzODMxOH0.NkFoTjxVR-d2rvxCtGE4WuP659YSm2dblZfjj1gPjUU';
     const supabase = createClient(SUPABASE_URL, SUPABASE_KEY);
 
-    // --- Глобальные переменные ---
     let currentUser = null;
-    let currentStudyStart = null;      // время начала текущей сессии "Учусь" (Date)
+    let currentStudyStart = null;
     let totalStudySeconds = 0;
     let timerInterval = null;
     let heartbeatInterval = null;
 
-    // --- Форматирование ---
+    // ---- форматирование ----
     const formatTimeShort = (sec) => {
         if (!sec && sec !== 0) return "0 мин";
         const h = Math.floor(sec / 3600);
@@ -302,162 +300,189 @@
         }
     }
 
-    // --- Сердцебиение (онлайн) ---
     async function updateLastSeen() {
         if (!currentUser) return;
-        await supabase.from('profiles').update({ last_seen: new Date().toISOString() }).eq('id', currentUser.id);
+        try {
+            await supabase.from('profiles').update({ last_seen: new Date().toISOString() }).eq('id', currentUser.id);
+        } catch(e) { console.warn(e); }
     }
 
-    // --- Загрузка состояния учёбы пользователя из БД ---
     async function fetchMyStudyState() {
         if (!currentUser) return;
-        const { data, error } = await supabase
-            .from('profiles')
-            .select('status, total_study_seconds, study_session_start')
-            .eq('id', currentUser.id)
-            .single();
-        if (error) {
-            console.warn("Не удалось загрузить учёбу", error);
-            return;
+        try {
+            const { data, error } = await supabase
+                .from('profiles')
+                .select('status, total_study_seconds, study_session_start')
+                .eq('id', currentUser.id)
+                .single();
+            if (error) throw error;
+            totalStudySeconds = data.total_study_seconds || 0;
+            if (data.status === "📚 Учусь" && data.study_session_start) {
+                const start = new Date(data.study_session_start);
+                if (!isNaN(start)) currentStudyStart = start;
+                else currentStudyStart = null;
+            } else {
+                currentStudyStart = null;
+            }
+            updateStudyUI();
+        } catch (e) {
+            console.warn("fetchMyStudyState:", e);
+            // если колонок нет – просто игнорируем
         }
-        totalStudySeconds = data.total_study_seconds || 0;
-        if (data.status === "📚 Учусь" && data.study_session_start) {
-            const start = new Date(data.study_session_start);
-            if (!isNaN(start)) currentStudyStart = start;
-            else currentStudyStart = null;
-        } else {
-            currentStudyStart = null;
-        }
-        updateStudyUI();
     }
 
-    // --- Смена статуса с учётом времени учёбы ---
-    async function changeStatus(newStatus, newColor) {
+    async function changeStatus(newStatus) {
         if (!currentUser) { alert("Войдите через Google"); return; }
-        const { data: profile, error: fetchErr } = await supabase
-            .from('profiles')
-            .select('status, study_session_start, total_study_seconds')
-            .eq('id', currentUser.id)
-            .single();
-        if (fetchErr) { console.error(fetchErr); return; }
+        try {
+            const { data: profile, error: fetchErr } = await supabase
+                .from('profiles')
+                .select('status, study_session_start, total_study_seconds')
+                .eq('id', currentUser.id)
+                .single();
+            if (fetchErr) throw fetchErr;
 
-        let updatedTotal = profile.total_study_seconds || 0;
-        let newStudyStart = null;
-        const nowISO = new Date().toISOString();
-        const nowDate = new Date();
+            let updatedTotal = profile.total_study_seconds || 0;
+            let newStudyStart = null;
+            const nowISO = new Date().toISOString();
+            const nowDate = new Date();
 
-        // Если выходим из "Учусь" – добавляем прошедшее время
-        if (profile.status === "📚 Учусь" && profile.study_session_start) {
-            const start = new Date(profile.study_session_start);
-            if (!isNaN(start)) {
-                const elapsed = Math.floor((nowDate - start) / 1000);
-                if (elapsed > 0) updatedTotal += elapsed;
+            if (profile.status === "📚 Учусь" && profile.study_session_start) {
+                const start = new Date(profile.study_session_start);
+                if (!isNaN(start)) {
+                    const elapsed = Math.floor((nowDate - start) / 1000);
+                    if (elapsed > 0) updatedTotal += elapsed;
+                }
             }
+            if (newStatus === "📚 Учусь") {
+                newStudyStart = nowISO;
+            }
+
+            const { error: updateErr } = await supabase
+                .from('profiles')
+                .update({
+                    status: newStatus,
+                    total_study_seconds: updatedTotal,
+                    study_session_start: newStudyStart,
+                    last_seen: nowISO
+                })
+                .eq('id', currentUser.id);
+
+            if (updateErr) throw updateErr;
+
+            totalStudySeconds = updatedTotal;
+            currentStudyStart = newStatus === "📚 Учусь" ? new Date(nowISO) : null;
+            updateStudyUI();
+            await fetchGroupList();
+        } catch (err) {
+            console.error(err);
+            showError("Ошибка смены статуса: " + err.message);
         }
-        if (newStatus === "📚 Учусь") {
-            newStudyStart = nowISO;
-        }
-
-        const { error: updateErr } = await supabase
-            .from('profiles')
-            .update({
-                status: newStatus,
-                color: newColor,
-                total_study_seconds: updatedTotal,
-                study_session_start: newStudyStart,
-                last_seen: nowISO
-            })
-            .eq('id', currentUser.id);
-
-        if (updateErr) { alert("Ошибка: " + updateErr.message); return; }
-
-        totalStudySeconds = updatedTotal;
-        currentStudyStart = newStatus === "📚 Учусь" ? new Date(nowISO) : null;
-        updateStudyUI();
-        await fetchGroupList();
     }
 
-    // --- Загрузка списка группы + онлайн индикаторы ---
     async function fetchGroupList() {
-        if (!supabase) return;
-        const { data: users, error } = await supabase
-            .from('profiles')
-            .select('id, username, status, color, last_seen, total_study_seconds')
-            .order('username');
-        if (error) {
-            showError("Ошибка загрузки группы: " + error.message);
-            return;
-        }
-        const now = new Date();
-        const twoMinsAgo = new Date(now - 120000);
-        let onlineCount = 0;
-        const html = users.map(u => {
-            const isOnline = u.last_seen ? new Date(u.last_seen) > twoMinsAgo : false;
-            if (isOnline) onlineCount++;
-            const emoji = u.status?.includes('📚') ? '📚' : (u.status?.includes('☕') ? '☕' : (u.status?.includes('🎮') ? '🎮' : (u.status?.includes('🏠') ? '🏠' : '💬')));
-            const study = u.total_study_seconds || 0;
-            return `
-                <div class="user-item">
-                    <div class="user-avatar-status">
-                        <div class="avatar-small">${emoji}</div>
-                        <span class="online-dot ${isOnline ? '' : 'offline-dot'}"></span>
-                    </div>
-                    <div class="user-info-group">
-                        <div class="user-name-group">
-                            ${escapeHtml(u.username || 'Без имени')}
-                            <span class="status-text-sm">${escapeHtml(u.status || '—')}</span>
+        if (!currentUser) return;
+        try {
+            // Пытаемся получить все нужные поля, но если колонки нет – запрос упадёт.
+            // Поэтому запрашиваем только базовые, а для времени учёбы делаем отдельный запрос, если колонка есть.
+            const { data: users, error } = await supabase
+                .from('profiles')
+                .select('id, username, status, last_seen')  // без color, без total_study_seconds (если нет колонки)
+                .order('username');
+            if (error) throw error;
+
+            // Пытаемся дополнительно получить total_study_seconds, если колонка существует
+            let studyMap = new Map();
+            try {
+                const { data: studyData } = await supabase
+                    .from('profiles')
+                    .select('id, total_study_seconds');
+                if (studyData) studyData.forEach(s => studyMap.set(s.id, s.total_study_seconds || 0));
+            } catch(e) { /* нет колонки - игнорируем */ }
+
+            const now = new Date();
+            const twoMinsAgo = new Date(now - 120000);
+            let onlineCount = 0;
+
+            const html = users.map(u => {
+                const isOnline = u.last_seen ? new Date(u.last_seen) > twoMinsAgo : false;
+                if (isOnline) onlineCount++;
+                const emoji = u.status?.includes('📚') ? '📚' : (u.status?.includes('☕') ? '☕' : (u.status?.includes('🎮') ? '🎮' : (u.status?.includes('🏠') ? '🏠' : '💬')));
+                const studySec = studyMap.get(u.id) || 0;
+                return `
+                    <div class="user-item">
+                        <div class="user-avatar-status">
+                            <div class="avatar-small">${emoji}</div>
+                            <span class="online-dot ${isOnline ? '' : 'offline-dot'}"></span>
                         </div>
-                        <div class="study-badge">🧠 учёба: ${formatTimeShort(study)}</div>
+                        <div class="user-info-group">
+                            <div class="user-name-group">
+                                ${escapeHtml(u.username || 'Без имени')}
+                                <span class="status-text-sm">${escapeHtml(u.status || '—')}</span>
+                            </div>
+                            <div class="study-badge">🧠 учёба: ${formatTimeShort(studySec)}</div>
+                        </div>
+                        <div style="font-size:0.7rem;">${isOnline ? '🟢 онлайн' : '⚫ офлайн'}</div>
                     </div>
-                    <div style="font-size:0.7rem;">${isOnline ? '🟢 онлайн' : '⚫ офлайн'}</div>
-                </div>
-            `;
-        }).join('');
-        document.getElementById('groupList').innerHTML = html || '<div class="alert-banner">Нет пользователей</div>';
-        document.getElementById('onlineCountBadge').innerHTML = `${onlineCount} онлайн`;
+                `;
+            }).join('');
+            document.getElementById('groupList').innerHTML = html || '<div class="alert-banner">Нет пользователей</div>';
+            document.getElementById('onlineCountBadge').innerHTML = `${onlineCount} онлайн`;
+        } catch (err) {
+            console.error(err);
+            showError("Ошибка загрузки группы: " + err.message);
+            document.getElementById('groupList').innerHTML = '<div class="alert-banner error-banner">Не удалось загрузить список. Возможно, отсутствуют колонки в таблице profiles.</div>';
+        }
     }
 
-    // --- ЧАТ ---
+    // ---- ЧАТ ----
     async function loadChatMessages() {
-        const { data, error } = await supabase
-            .from('messages')
-            .select('*')
-            .order('created_at', { ascending: true })
-            .limit(100);
-        if (error) {
-            if (error.message.includes('relation "messages" does not exist')) {
-                document.getElementById('chatMessages').innerHTML = '<div class="alert-banner error-banner">⚠️ Таблица messages отсутствует. Выполните SQL (см. консоль).</div>';
+        try {
+            const { data, error } = await supabase
+                .from('messages')
+                .select('*')
+                .order('created_at', { ascending: true })
+                .limit(100);
+            if (error) throw error;
+            const container = document.getElementById('chatMessages');
+            if (!data || data.length === 0) {
+                container.innerHTML = '<div class="message" style="color:gray;">✨ Напишите первое сообщение</div>';
+                return;
             }
-            return;
+            container.innerHTML = data.map(msg => `
+                <div class="message">
+                    <strong>${escapeHtml(msg.username || 'Аноним')}</strong>
+                    <span class="message-time">${new Date(msg.created_at).toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'})}</span>
+                    <div style="margin-top:5px;">${escapeHtml(msg.message)}</div>
+                </div>
+            `).join('');
+            container.scrollTop = container.scrollHeight;
+        } catch (err) {
+            console.warn(err);
+            if (err.message.includes('relation "messages" does not exist')) {
+                document.getElementById('chatMessages').innerHTML = '<div class="alert-banner error-banner">⚠️ Таблица messages отсутствует. Выполните SQL (см. консоль).</div>';
+            } else {
+                document.getElementById('chatMessages').innerHTML = '<div class="alert-banner error-banner">Ошибка чата: ' + err.message + '</div>';
+            }
         }
-        const container = document.getElementById('chatMessages');
-        if (!data || data.length === 0) {
-            container.innerHTML = '<div class="message" style="color:gray;">✨ Напишите первое сообщение</div>';
-            return;
-        }
-        container.innerHTML = data.map(msg => `
-            <div class="message">
-                <strong>${escapeHtml(msg.username || 'Аноним')}</strong>
-                <span class="message-time">${new Date(msg.created_at).toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'})}</span>
-                <div style="margin-top:5px;">${escapeHtml(msg.message)}</div>
-            </div>
-        `).join('');
-        container.scrollTop = container.scrollHeight;
     }
 
     async function sendMessage(text) {
         if (!currentUser) { alert("Войдите через Google"); return; }
         if (!text.trim()) return;
         const username = currentUser.user_metadata?.full_name || currentUser.email?.split('@')[0] || 'Пользователь';
-        const { error } = await supabase.from('messages').insert({
-            user_id: currentUser.id,
-            username: username,
-            message: text.trim(),
-            created_at: new Date().toISOString()
-        });
-        if (error) { alert("Ошибка отправки: " + error.message); return; }
-        document.getElementById('chatInput').value = '';
-        loadChatMessages();
+        try {
+            const { error } = await supabase.from('messages').insert({
+                user_id: currentUser.id,
+                username: username,
+                message: text.trim(),
+                created_at: new Date().toISOString()
+            });
+            if (error) throw error;
+            document.getElementById('chatInput').value = '';
+            loadChatMessages();
+        } catch (err) {
+            alert("Ошибка отправки: " + err.message);
+        }
     }
 
     function subscribeChat() {
@@ -466,7 +491,7 @@
             .subscribe();
     }
 
-    // --- ТОЛЬКО GOOGLE ВХОД ---
+    // ---- ТОЛЬКО GOOGLE ----
     async function loginWithGoogle() {
         const { error } = await supabase.auth.signInWithOAuth({
             provider: 'google',
@@ -475,7 +500,7 @@
         if (error) alert("Ошибка входа: " + error.message);
     }
 
-    // --- Инициализация UI в зависимости от сессии ---
+    // ---- Инициализация UI ----
     async function initAuthUI() {
         const { data: { user } } = await supabase.auth.getUser();
         currentUser = user;
@@ -483,7 +508,6 @@
         const statusDiv = document.getElementById('statusButtons');
 
         if (user) {
-            // Залогинен
             const userName = user.user_metadata?.full_name || user.email.split('@')[0];
             const avatar = user.user_metadata?.avatar_url;
             myInfoDiv.innerHTML = `
@@ -500,22 +524,21 @@
                 location.reload();
             });
             statusDiv.innerHTML = `
-                <button class="btn btn-study" data-status="📚 Учусь" data-color="#10b981">📚 Учусь</button>
-                <button class="btn btn-coffee" data-status="☕ Кофе" data-color="#f59e0b">☕ Кофе</button>
-                <button class="btn btn-game" data-status="🎮 В игре" data-color="#3b82f6">🎮 В игре</button>
-                <button class="btn btn-home" data-status="🏠 Дома" data-color="#64748b">🏠 Дома</button>
+                <button class="btn btn-study">📚 Учусь</button>
+                <button class="btn btn-coffee">☕ Кофе</button>
+                <button class="btn btn-game">🎮 В игре</button>
+                <button class="btn btn-home">🏠 Дома</button>
             `;
             document.querySelectorAll('.btn').forEach(btn => {
-                const st = btn.getAttribute('data-status');
-                const col = btn.getAttribute('data-color');
-                if (st && col) btn.onclick = () => changeStatus(st, col);
+                const statusText = btn.innerText.includes('Учусь') ? '📚 Учусь' : (btn.innerText.includes('Кофе') ? '☕ Кофе' : (btn.innerText.includes('Игре') ? '🎮 В игре' : '🏠 Дома'));
+                btn.onclick = () => changeStatus(statusText);
             });
             await fetchMyStudyState();
             await updateLastSeen();
             if (heartbeatInterval) clearInterval(heartbeatInterval);
             heartbeatInterval = setInterval(() => updateLastSeen(), 25000);
 
-            // Создать профиль если нет
+            // Создать профиль, если нет
             const { data: exists } = await supabase.from('profiles').select('id').eq('id', user.id).single();
             if (!exists) {
                 await supabase.from('profiles').insert({
@@ -545,16 +568,15 @@
         timerInterval = setInterval(() => updateStudyUI(), 1000);
     }
 
-    // --- Проверка структуры БД и вывод SQL ---
+    // ---- Проверка структуры БД и вывод SQL ----
     async function checkDatabaseAndShowSQL() {
         let missingSQL = [];
-        // Проверяем колонки в profiles
+        // Проверяем колонки в profiles (не используем color, но нужны last_seen, total_study_seconds, study_session_start)
         const { error: colLastSeen } = await supabase.from('profiles').select('last_seen').limit(1);
         if (colLastSeen && colLastSeen.message?.includes('last_seen')) {
             missingSQL.push(`ALTER TABLE profiles ADD COLUMN IF NOT EXISTS last_seen timestamptz DEFAULT now();`);
             missingSQL.push(`ALTER TABLE profiles ADD COLUMN IF NOT EXISTS total_study_seconds int DEFAULT 0;`);
             missingSQL.push(`ALTER TABLE profiles ADD COLUMN IF NOT EXISTS study_session_start timestamptz NULL;`);
-            missingSQL.push(`ALTER TABLE profiles ADD COLUMN IF NOT EXISTS color text DEFAULT '#64748b';`);
         }
         // Проверяем таблицу messages
         const { error: msgTable } = await supabase.from('messages').select('id').limit(1);
@@ -602,13 +624,13 @@ CREATE POLICY "Авторизованные могут вставлять" ON me
         });
     }
 
-    // --- Обработчики чата ---
+    // ---- Обработчики чата ----
     document.getElementById('sendChatBtn')?.addEventListener('click', () => sendMessage(document.getElementById('chatInput').value));
     document.getElementById('chatInput')?.addEventListener('keypress', (e) => {
         if (e.key === 'Enter') sendMessage(e.target.value);
     });
 
-    // --- Запуск ---
+    // ---- Запуск ----
     supabase.auth.onAuthStateChange((event) => {
         if (event === 'SIGNED_IN' || event === 'SIGNED_OUT') location.reload();
     });
