@@ -3,11 +3,11 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Монитор статуса</title>
+    <title>Монитор статуса и Чат</title>
     <style>
         body {
             font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
-            background-color: #f0f2f5;
+            background-color: #f0f4f8;
             display: flex;
             flex-direction: column;
             align-items: center;
@@ -17,134 +17,191 @@
 
         .card {
             background: white;
-            border-radius: 12px;
-            box-shadow: 0 4px 6px rgba(0,0,0,0.05);
+            border-radius: 20px;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.03);
             padding: 24px;
             width: 100%;
-            max-width: 500px;
+            max-width: 450px;
             margin-bottom: 20px;
             box-sizing: border-box;
+            text-align: center;
         }
 
-        h2 { margin-top: 0; font-size: 1.2rem; color: #1a1a1a; }
-        #myInfo { color: #666; margin-bottom: 15px; font-size: 0.9rem; }
+        .user-name {
+            font-size: 1.4rem;
+            font-weight: bold;
+            margin-bottom: 15px;
+            color: #000;
+        }
 
-        /* Сетка кнопок */
-        .status-buttons {
-            display: grid;
-            grid-template-columns: 1fr 1fr;
+        .main-timer {
+            font-size: 2rem;
+            font-weight: bold;
+            color: #2b76ff;
+            display: flex;
+            align-items: center;
+            justify-content: center;
             gap: 10px;
+            margin-bottom: 20px;
         }
 
-        .btn {
+        /* Кнопки действий */
+        .btn-action {
+            width: 100%;
             border: none;
-            border-radius: 8px;
-            padding: 12px;
-            font-weight: 600;
+            border-radius: 12px;
+            padding: 14px;
+            font-size: 1.05rem;
+            font-weight: bold;
             color: white;
             cursor: pointer;
+            margin-bottom: 12px;
             display: flex;
             align-items: center;
             justify-content: center;
             gap: 8px;
-            transition: opacity 0.2s;
-            border: 1px solid rgba(0,0,0,0.1);
+        }
+        .btn-stop { background-color: #dc3545; }
+        
+        .sub-buttons {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 12px;
+        }
+        .btn-pause { background-color: #ffb703; color: #000; }
+        .btn-exit { background-color: #6c757d; }
+
+        /* Монитор группы */
+        .section-title {
+            font-size: 1.15rem;
+            font-weight: bold;
+            margin-top: 0;
+            margin-bottom: 15px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            color: #000;
         }
 
-        .btn:hover { opacity: 0.9; }
-
-        /* Цвета кнопок */
-        .btn-study { background-color: #28a745; }
-        .btn-coffee { background-color: #ffc107; color: #000; }
-        .btn-game { background-color: #17a2b8; }
-        .btn-home { background-color: #6c757d; }
-
-        /* Список пользователей */
         .user-item {
             display: flex;
             align-items: center;
             justify-content: space-between;
-            padding: 12px 0;
-            border-bottom: 1px solid #eee;
+            padding: 12px 5px;
+            border-bottom: 1px solid #f0f0f0;
+            text-align: left;
         }
-
         .user-item:last-child { border-bottom: none; }
 
-        .user-info-block {
+        .user-left {
             display: flex;
             align-items: center;
+            gap: 10px;
+            font-weight: bold;
+            font-size: 1.05rem;
         }
 
-        .status-dot {
-            width: 12px;
-            height: 12px;
+        .online-indicator {
+            width: 10px;
+            height: 10px;
             border-radius: 50%;
-            margin-right: 12px;
-            flex-shrink: 0;
-            position: relative;
+            background-color: #ccc; /* Оффлайн по умолчанию */
+        }
+        .online-indicator.is-online {
+            background-color: #28a745;
+            box-shadow: 0 0 8px #28a745;
         }
 
-        /* Индикатор онлайн (зеленое кольцо или точка) */
-        .status-dot.online::after {
-            content: '';
-            position: absolute;
-            top: -2px;
-            left: -2px;
-            width: 12px;
-            height: 12px;
-            border-radius: 50%;
-            border: 2px solid #28a745;
-            animation: pulse 2s infinite;
-        }
-
-        @keyframes pulse {
-            0% { transform: scale(0.9); opacity: 1; }
-            100% { transform: scale(1.4); opacity: 0; }
-        }
-
-        .user-meta {
+        .user-right {
             text-align: right;
             font-size: 0.85rem;
             color: #666;
         }
-
-        .time-counter {
-            font-weight: bold;
-            color: #007bff;
+        .status-container {
             display: flex;
             align-items: center;
-            justify-content: flex-end;
             gap: 4px;
+            justify-content: flex-end;
+        }
+        .user-study-time {
+            color: #2b76ff;
+            font-size: 0.8rem;
+            margin-top: 2px;
         }
 
-        #groupList { margin-top: 10px; }
+        /* Общий чат */
+        .chat-box {
+            background: #f8f9fa;
+            border: 1px solid #e9ecef;
+            border-radius: 12px;
+            height: 180px;
+            overflow-y: auto;
+            padding: 12px;
+            text-align: left;
+            margin-bottom: 12px;
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+        }
+        .chat-msg {
+            font-size: 0.95rem;
+            line-height: 1.4;
+        }
+        .chat-msg strong { color: #000; }
+
+        .chat-input-row {
+            display: flex;
+            gap: 8px;
+        }
+        .chat-input {
+            flex-grow: 1;
+            border: 1px solid #ced4da;
+            border-radius: 10px;
+            padding: 10px 14px;
+            font-size: 0.95rem;
+            outline: none;
+        }
+        .btn-send {
+            background-color: #2ec4b6;
+            border: none;
+            border-radius: 10px;
+            width: 45px;
+            color: white;
+            font-size: 1.2rem;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
     </style>
 </head>
 <body>
 
     <div class="card">
-        <h2>Мой профиль</h2>
-        <div id="myInfo">Загрузка профиля...</div>
-        
-        <div class="status-buttons">
-            <button class="btn btn-study" onclick="changeStatus('📚 Учусь', '#28a745')">
-                📚 Учусь
-            </button>
-            <button class="btn btn-coffee" onclick="changeStatus('☕ Кофе', '#ffc107')">
-                ☕ Кофе
-            </button>
-            <button class="btn btn-game" onclick="changeStatus('🎮 В игре', '#17a2b8')">
-                🎮 В игре
-            </button>
-            <button class="btn btn-home" onclick="changeStatus('🏠 Дома', '#6c757d')">
-                🏠 Дома
-            </button>
+        <div class="user-name" id="myUsername">Загрузка...</div>
+        <div class="main-timer">
+            ⏱️ <span id="myTimer">0ч 0м 0с</span>
+        </div>
+        <button class="btn-action btn-stop" onclick="changeStatus('📚 Учусь', '#28a745')">⛔ Завершить сессию</button>
+        <div class="sub-buttons">
+            <button class="btn-action btn-pause" onclick="changeStatus('☕ Перерыв', '#ffb703')">☕ Перерыв</button>
+            <button class="btn-action btn-exit" onclick="changeStatus('🏠 Дома', '#6c757d')">Выход</button>
         </div>
     </div>
 
     <div class="card">
-        <h2>👥 Монитор группы</h2>
-        <div id="groupList">Загрузка списка группы...</div>
+        <div class="section-title">👥 Монитор группы</div>
+        <div id="groupList">Загрузка списка участников...</div>
+    </div>
+
+    <div class="card">
+        <div class="section-title">💬 Общий чат</div>
+        <div class="chat-box" id="chatBox"></div>
+        <div class="chat-input-row">
+            <input type="text" class="chat-input" id="chatInput" placeholder="Сообщение..." onkeydown="if(event.key === 'Enter') sendMessage()">
+            <button class="btn-send" onclick="sendMessage()">➤</button>
+        </div>
     </div>
 
     <script type="module">
@@ -158,9 +215,8 @@
         
         let usersData = [];
         let onlineUsers = {};
-        let studyTimers = {};
+        let currentUserName = "Пользователь";
 
-        // Форматирование секунд в красивую строку (0ч 0м 23с)
         function formatTime(totalSeconds) {
             const hours = Math.floor(totalSeconds / 3600);
             const minutes = Math.floor((totalSeconds % 3600) / 60);
@@ -168,27 +224,22 @@
             return `${hours}ч ${minutes}м ${seconds}с`;
         }
 
+        // Изменение статуса
         window.changeStatus = async (text, color) => {
-            // Если переходим в статус "Учусь", сбрасываем локальный счетчик или продолжаем текущий
-            const updates = { 
-                status: text, 
-                color: color,
-                last_status_change: new Date().toISOString() 
-            };
-
             const { error } = await supabase
                 .from('profiles')
-                .update(updates)
+                .update({ 
+                    status: text, 
+                    color: color,
+                    last_status_change: new Date().toISOString() 
+                })
                 .eq('id', MY_ID);
 
-            if (error) {
-                alert("Ошибка! Проверьте RLS политики в Supabase.");
-                console.error(error);
-            } else {
-                fetchGroup();
-            }
+            if (error) console.error(error);
+            else fetchGroup();
         };
 
+        // Получение пользователей
         async function fetchGroup() {
             const { data, error } = await supabase
                 .from('profiles')
@@ -196,14 +247,17 @@
                 .order('username', { ascending: true });
 
             if (error) return console.error(error);
-
             usersData = data;
-            renderGroupList();
-
+            
             const me = data.find(u => u.id === MY_ID);
-            if (me) document.getElementById('myInfo').innerText = `Вы зашли как: ${me.username}`;
+            if (me) {
+                currentUserName = me.username;
+                document.getElementById('myUsername').innerText = me.username;
+            }
+            renderGroupList();
         }
 
+        // Отрендерить монитор группы
         function renderGroupList() {
             const list = document.getElementById('groupList');
             if (!usersData.length) return;
@@ -212,82 +266,129 @@
                 const isOnline = !!onlineUsers[user.id];
                 const isLearning = user.status === '📚 Учусь';
                 
-                // Считаем время, проведенное в учебе
-                let initialSeconds = 0;
-                if (isLearning && user.last_status_change) {
-                    const changeTime = new Date(user.last_status_change).getTime();
-                    initialSeconds = Math.floor((Date.now() - changeTime) / 1000);
-                    if (initialSeconds < 0) initialSeconds = 0;
-                    studyTimers[user.id] = initialSeconds; // сохраняем для тиканья
-                } else {
-                    studyTimers[user.id] = 0;
+                // Рассчитываем прошедшее время
+                let secondsElapsed = 0;
+                if (user.last_status_change) {
+                    secondsElapsed = Math.floor((Date.now() - new Date(user.last_status_change).getTime()) / 1000);
+                    if (secondsElapsed < 0) secondsElapsed = 0;
+                }
+
+                // Обновляем главный таймер текущего юзера, если это он
+                if (user.id === MY_ID) {
+                    document.getElementById('myTimer').innerText = formatTime(secondsElapsed);
                 }
 
                 return `
-                    <div class="user-item" id="user-${user.id}">
-                        <div class="user-info-block">
-                            <div class="status-dot ${isOnline ? 'online' : ''}" style="background: ${user.color || '#ccc'}"></div>
-                            <div>
-                                <strong>${user.username}</strong><br>
-                                <small style="color: #666;">${user.status || 'Статус не задан'}</small>
-                            </div>
+                    <div class="user-item">
+                        <div class="user-left">
+                            <div class="online-indicator ${isOnline ? 'is-online' : ''}"></div>
+                            <span>${user.username}</span>
                         </div>
-                        <div class="user-meta">
-                            <div>${isOnline ? '🟢 онлайн' : '⚫ оффлайн'}</div>
-                            ${isLearning ? `
-                                <div class="time-counter" id="timer-${user.id}">
-                                    ⏱️ <span>${formatTime(studyTimers[user.id])}</span>
-                                </div >
-                            ` : ''}
+                        <div class="user-right">
+                            <div class="status-container">
+                                <span>${user.status === '🏠 Дома' ? '🏠' : (user.status === '☕ Перерыв' ? '☕' : '📚')}</span>
+                                <span>${user.status || 'Вне сети'}</span>
+                            </div>
+                            <div class="user-study-time" id="time-${user.id}" data-start="${user.last_status_change || ''}" data-active="${isLearning}">
+                                ⏱️ ${formatTime(secondsElapsed)}
+                            </div>
                         </div>
                     </div>
                 `;
             }).join('');
         }
 
-        // Секундомер реального времени для UI
+        // Секундомер (Тиканье интерфейса раз в секунду)
         setInterval(() => {
-            usersData.forEach(user => {
-                if (user.status === '📚 Учусь' && studyTimers[user.id] !== undefined) {
-                    studyTimers[user.id]++;
-                    const timerTextSpan = document.querySelector(`#timer-${user.id} span`);
-                    if (timerTextSpan) {
-                        timerTextSpan.innerText = formatTime(studyTimers[user.id]);
+            document.querySelectorAll('.user-study-time').forEach(el => {
+                const isLearning = el.getAttribute('data-active') === 'true';
+                const startStr = el.getAttribute('data-start');
+                
+                if (isLearning && startStr) {
+                    const seconds = Math.floor((Date.now() - new Date(startStr).getTime()) / 1000);
+                    if (seconds >= 0) {
+                        el.innerHTML = `⏱️ ${formatTime(seconds)}`;
+                        // Если это таймер текущего юзера, дублируем в верхнюю карточку
+                        if (el.id === `time-${MY_ID}`) {
+                            document.getElementById('myTimer').innerText = formatTime(seconds);
+                        }
                     }
                 }
             });
         }, 1000);
 
-        // --- SUPABASE PRESENCE (ОТСЛЕЖИВАНИЕ ОНЛАЙНА) ---
-        const room = supabase.channel('online-users');
+        // --- РАБОТА С ЧАТОМ ---
+        async function fetchMessages() {
+            const { data, error } = await supabase
+                .from('messages')
+                .select('*')
+                .order('id', { ascending: false })
+                .limit(30);
 
-        room
+            if (error) return console.error(error);
+            
+            const chatBox = document.getElementById('chatBox');
+            // Переворачиваем обратно, чтобы старые были сверху, новые снизу
+            chatBox.innerHTML = data.reverse().map(msg => `
+                <div class="chat-msg">
+                    <strong>${msg.username}:</strong> ${escapeHTML(msg.text)}
+                </div>
+            `).join('');
+            chatBox.scrollTop = chatBox.scrollHeight;
+        }
+
+        window.sendMessage = async () => {
+            const input = document.getElementById('chatInput');
+            const text = input.value.trim();
+            if (!text) return;
+
+            input.value = '';
+
+            const { error } = await supabase
+                .from('messages')
+                .insert([{ user_id: MY_ID, username: currentUserName, text: text }]);
+
+            if (error) console.error(error);
+        };
+
+        function escapeHTML(str) {
+            return str.replace(/[&<>'"]/g, tag => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', "'": '&#39;', '"': '&quot;' }[tag] || tag));
+        }
+
+        // --- SUPABASE REALTIME & PRESENCE (Слушатели событий) ---
+        
+        // 1. Канал для Онлайн-статусов
+        const presenceChannel = supabase.channel('online-tracker');
+        presenceChannel
             .on('presence', { event: 'sync' }, () => {
-                const newState = room.presenceState();
+                const state = presenceChannel.presenceState();
                 onlineUsers = {};
-                
-                // Переводим массив присутствия в удобный объект по ID пользователей
-                Object.keys(newState).forEach(id => {
-                    const userPresenceArray = newState[id];
-                    if (userPresenceArray && userPresenceArray.length > 0) {
-                        const userId = userPresenceArray[0].user_id;
-                        onlineUsers[userId] = true;
-                    }
+                Object.keys(state).forEach(id => {
+                    const pres = state[id];
+                    if (pres && pres[0]) onlineUsers[pres[0].user_id] = true;
                 });
                 renderGroupList();
             })
             .subscribe(async (status) => {
                 if (status === 'SUBSCRIBED') {
-                    // Отправляем информацию о том, что текущий юзер в сети
-                    await room.track({ user_id: MY_ID, online_at: new Date().toISOString() });
+                    await presenceChannel.track({ user_id: MY_ID });
                 }
             });
 
-        // Первичная загрузка данных
+        // 2. Канал для авто-обновления сообщений чата в реальном времени
+        supabase
+            .channel('chat-realtime')
+            .on('postgres_changes', { event: 'INSERT', scheme: 'public', table: 'messages' }, payload => {
+                fetchMessages();
+            })
+            .subscribe();
+
+        // Первичный запуск данных
         fetchGroup();
+        fetchMessages();
         
-        // Раз в 10 секунд актуализируем данные из базы (например, если кто-то сменил статус)
-        setInterval(fetchGroup, 10000);
+        // Каждые 15 секунд синхронизируем базу (если кто-то сменил статус кнопкой)
+        setInterval(fetchGroup, 15000);
     </script>
 </body>
 </html>
