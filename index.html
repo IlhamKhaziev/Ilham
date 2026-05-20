@@ -567,9 +567,12 @@
         
         // Следим за изменением auth состояния
         supabase.auth.onAuthStateChange((event) => {
-            if (event === 'SIGNED_IN' || event === 'SIGNED_OUT') {
-                location.reload();
-            }
+    if (event === 'SIGNED_OUT') {
+        location.reload(); // При выходе перезагрузить страницу — это нормально
+    } else if (event === 'SIGNED_IN') {
+        // Убираем location.reload(), чтобы не было бесконечного цикла!
+        init(); 
+    }
         });
         
         init();
