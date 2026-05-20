@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Учебная платформа</title>
+    <title>Учебная платформа | Рейтинг и Достижения</title>
     <style>
         * {
             margin: 0;
@@ -19,15 +19,21 @@
         }
 
         .container {
-            max-width: 800px;
+            max-width: 1200px;
             margin: 0 auto;
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 24px;
+        }
+
+        .full-width {
+            grid-column: span 2;
         }
 
         .card {
             background: white;
             border-radius: 24px;
             padding: 32px;
-            margin-bottom: 24px;
             box-shadow: 0 10px 30px rgba(0,0,0,0.15);
         }
 
@@ -44,6 +50,12 @@
             color: #1e293b;
             border-left: 4px solid #667eea;
             padding-left: 16px;
+        }
+
+        h3 {
+            font-size: 1rem;
+            margin: 12px 0 8px 0;
+            color: #1e293b;
         }
 
         .btn-google {
@@ -148,6 +160,11 @@
             padding: 10px 24px;
             font-weight: 600;
             cursor: pointer;
+            transition: transform 0.1s;
+        }
+
+        .btn:active {
+            transform: scale(0.95);
         }
 
         .btn-start { background: #10b981; color: white; }
@@ -177,6 +194,24 @@
 
         .offline-dot {
             background: #94a3b8;
+        }
+
+        .leaderboard-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 12px;
+            border-bottom: 1px solid #e2e8f0;
+            transition: background 0.2s;
+        }
+
+        .leaderboard-item:hover {
+            background: #f1f5f9;
+        }
+
+        .medal {
+            font-size: 1.5rem;
+            min-width: 40px;
         }
 
         .chat-messages {
@@ -227,6 +262,72 @@
             cursor: pointer;
         }
 
+        .achievements-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+            gap: 16px;
+            margin-top: 20px;
+        }
+
+        .achievement-card {
+            background: #f8fafc;
+            border-radius: 16px;
+            padding: 16px;
+            text-align: center;
+            transition: all 0.3s;
+            cursor: pointer;
+        }
+
+        .achievement-card.unlocked {
+            background: linear-gradient(135deg, #667eea15, #764ba215);
+            border: 2px solid #667eea;
+        }
+
+        .achievement-card.locked {
+            opacity: 0.4;
+            filter: grayscale(100%);
+        }
+
+        .achievement-icon {
+            font-size: 2.5rem;
+            margin-bottom: 8px;
+        }
+
+        .achievement-title {
+            font-weight: 700;
+            font-size: 0.9rem;
+            margin-bottom: 4px;
+        }
+
+        .achievement-desc {
+            font-size: 0.75rem;
+            color: #64748b;
+        }
+
+        .notification {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            color: white;
+            padding: 16px 24px;
+            border-radius: 12px;
+            animation: slideIn 0.3s ease-out;
+            z-index: 1000;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+        }
+
+        @keyframes slideIn {
+            from {
+                transform: translateX(100%);
+                opacity: 0;
+            }
+            to {
+                transform: translateX(0);
+                opacity: 1;
+            }
+        }
+
         .error-message {
             background: #fee2e2;
             color: #dc2626;
@@ -245,18 +346,44 @@
             padding: 40px;
             color: #64748b;
         }
+
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 16px;
+            margin-bottom: 20px;
+        }
+
+        .stat-card {
+            background: #f8fafc;
+            border-radius: 16px;
+            padding: 16px;
+            text-align: center;
+        }
+
+        .stat-value {
+            font-size: 1.5rem;
+            font-weight: 700;
+            color: #667eea;
+        }
+
+        .stat-label {
+            font-size: 0.75rem;
+            color: #64748b;
+            margin-top: 4px;
+        }
     </style>
 </head>
 <body>
 <div class="container">
-    <div class="card" id="authCard">
+    <div class="card full-width" id="authCard">
         <h1>📚 Учебная платформа</h1>
         <div id="authContent">
             <div class="loading">⏳ Загрузка...</div>
         </div>
     </div>
 
-    <div class="card hidden" id="appCard">
+    <div class="card full-width hidden" id="appCard">
         <div class="profile-header">
             <div class="user-info">
                 <div class="avatar" id="userAvatar">👤</div>
@@ -277,6 +404,25 @@
                 <button class="btn btn-end" id="endBtn">⏹ Завершить</button>
             </div>
         </div>
+
+        <div class="stats-grid">
+            <div class="stat-card">
+                <div class="stat-value" id="sessionCount">0</div>
+                <div class="stat-label">Сессий</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-value" id="messageCount">0</div>
+                <div class="stat-label">Сообщений</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-value" id="achievementCount">0</div>
+                <div class="stat-label">Достижений</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-value" id="rankPlace">#0</div>
+                <div class="stat-label">Место в рейтинге</div>
+            </div>
+        </div>
     </div>
 
     <div class="card hidden" id="groupCard">
@@ -284,7 +430,17 @@
         <div id="groupList"></div>
     </div>
 
-    <div class="card hidden" id="chatCard">
+    <div class="card hidden" id="leaderboardCard">
+        <h2>🏆 Топ студентов</h2>
+        <div id="leaderboardList"></div>
+    </div>
+
+    <div class="card full-width hidden" id="achievementsCard">
+        <h2>🎖 Мои достижения</h2>
+        <div id="achievementsList" class="achievements-grid"></div>
+    </div>
+
+    <div class="card full-width hidden" id="chatCard">
         <h2>💬 Общий чат</h2>
         <div class="chat-messages" id="chatMessages"></div>
         <div class="chat-input">
@@ -311,6 +467,60 @@
         let totalSeconds = 0;
         let timerInterval = null;
         let heartbeatInterval = null;
+        let currentSessionCount = 0;
+        
+        // Конфигурация достижений
+        const ACHIEVEMENTS_CONFIG = {
+            early_bird: { id: 'early_bird', title: '🌅 Ранняя пташка', desc: 'Зашел на платформу до 8:00', icon: '🌅' },
+            marathon: { id: 'marathon', title: '🏃 Марафонец', desc: 'Проучился более 2 часов за раз', icon: '🏃' },
+            activist: { id: 'activist', title: '💬 Активист', desc: 'Написал 20 сообщений в чате', icon: '💬' },
+            first_step: { id: 'first_step', title: '🎯 Первый шаг', desc: 'Прошел первую учебную сессию', icon: '🎯' },
+            returning: { id: 'returning', title: '🔄 Возвращение', desc: 'Вернулся к учёбе после перерыва', icon: '🔄' }
+        };
+        
+        // Функция показа уведомления
+        function showNotification(message, title = '🎉 Достижение получено!') {
+            const notification = document.createElement('div');
+            notification.className = 'notification';
+            notification.innerHTML = `<strong>${title}</strong><br>${message}`;
+            document.body.appendChild(notification);
+            setTimeout(() => notification.remove(), 3000);
+        }
+        
+        // Функция проверки и выдачи ачивки
+        async function unlockAchievement(achievementId) {
+            if (!currentUser) return false;
+            
+            // Получаем текущие достижения пользователя
+            const { data: profile } = await supabase
+                .from('profiles')
+                .select('achievements')
+                .eq('id', currentUser.id)
+                .single();
+            
+            let currentAchievements = profile?.achievements || [];
+            
+            // Если ачивка уже есть, ничего не делаем
+            if (currentAchievements.includes(achievementId)) return false;
+            
+            // Добавляем новую ачивку в массив
+            currentAchievements.push(achievementId);
+            
+            // Сохраняем в бэкенд
+            const { error } = await supabase
+                .from('profiles')
+                .update({ achievements: currentAchievements })
+                .eq('id', currentUser.id);
+            
+            if (!error) {
+                const achievement = ACHIEVEMENTS_CONFIG[achievementId];
+                showNotification(`${achievement.title}: ${achievement.desc}`, '🎉 Новое достижение!');
+                await loadAchievements();
+                await updateUserStats();
+                return true;
+            }
+            return false;
+        }
         
         // Форматирование времени
         function formatTime(seconds) {
@@ -338,16 +548,121 @@
             totalDisplay.textContent = `📚 Всего учёбы: ${formatTotal(totalSeconds)}`;
         }
         
+        // Загрузка достижений пользователя
+        async function loadAchievements() {
+            if (!currentUser) return;
+            
+            const { data: profile } = await supabase
+                .from('profiles')
+                .select('achievements')
+                .eq('id', currentUser.id)
+                .single();
+            
+            const userAchievements = profile?.achievements || [];
+            const container = document.getElementById('achievementsList');
+            
+            if (!container) return;
+            
+            container.innerHTML = Object.values(ACHIEVEMENTS_CONFIG).map(ach => {
+                const isUnlocked = userAchievements.includes(ach.id);
+                return `
+                    <div class="achievement-card ${isUnlocked ? 'unlocked' : 'locked'}">
+                        <div class="achievement-icon">${ach.icon}</div>
+                        <div class="achievement-title">${ach.title}</div>
+                        <div class="achievement-desc">${ach.desc}</div>
+                    </div>
+                `;
+            }).join('');
+        }
+        
+        // Загрузка рейтинга
+        async function loadLeaderboard() {
+            const { data: topStudents, error } = await supabase
+                .from('profiles')
+                .select('username, total_study_seconds, status')
+                .order('total_study_seconds', { ascending: false })
+                .limit(10);
+            
+            if (error || !topStudents) return;
+            
+            const container = document.getElementById('leaderboardList');
+            if (!container) return;
+            
+            // Находим место текущего пользователя
+            if (currentUser) {
+                const { data: allUsers } = await supabase
+                    .from('profiles')
+                    .select('id, total_study_seconds')
+                    .order('total_study_seconds', { ascending: false });
+                
+                if (allUsers) {
+                    const userRank = allUsers.findIndex(u => u.id === currentUser.id) + 1;
+                    document.getElementById('rankPlace').textContent = `#${userRank}`;
+                }
+            }
+            
+            container.innerHTML = topStudents.map((student, index) => {
+                let medal = '👤';
+                if (index === 0) medal = '🥇';
+                else if (index === 1) medal = '🥈';
+                else if (index === 2) medal = '🥉';
+                
+                return `
+                    <div class="leaderboard-item">
+                        <div class="user-left">
+                            <span class="medal">${medal}</span>
+                            <div>
+                                <strong>${escapeHtml(student.username || 'Студент')}</strong>
+                                <div style="font-size: 0.75rem; color: #94a3b8;">Место #${index + 1}</div>
+                            </div>
+                        </div>
+                        <div style="font-weight: bold; color: #facc15;">
+                            ${formatTotal(student.total_study_seconds || 0)}
+                        </div>
+                    </div>
+                `;
+            }).join('');
+        }
+        
+        // Обновление статистики пользователя
+        async function updateUserStats() {
+            if (!currentUser) return;
+            
+            const { data: profile } = await supabase
+                .from('profiles')
+                .select('message_count, achievements, total_study_seconds')
+                .eq('id', currentUser.id)
+                .single();
+            
+            if (profile) {
+                document.getElementById('messageCount').textContent = profile.message_count || 0;
+                document.getElementById('achievementCount').textContent = (profile.achievements?.length || 0) + '/' + Object.keys(ACHIEVEMENTS_CONFIG).length;
+            }
+        }
+        
         // Сессии
         async function startSession() {
             if (!currentUser) return;
             if (sessionStartTime) return;
+            
+            // Проверка на возвращение после перерыва
+            const { data: profile } = await supabase
+                .from('profiles')
+                .select('status')
+                .eq('id', currentUser.id)
+                .single();
+            
+            if (profile?.status === '☕ Перерыв') {
+                await unlockAchievement('returning');
+            }
+            
             sessionStartTime = new Date();
             await supabase.from('profiles').update({
                 study_session_start: sessionStartTime.toISOString(),
                 status: '📚 Учусь',
                 last_seen: new Date().toISOString()
             }).eq('id', currentUser.id);
+            
             if (timerInterval) clearInterval(timerInterval);
             timerInterval = setInterval(updateTimerUI, 1000);
             await loadGroupList();
@@ -355,8 +670,14 @@
         
         async function pauseSession() {
             if (!currentUser || !sessionStartTime) return;
+            
             const elapsed = Math.floor((Date.now() - sessionStartTime) / 1000);
-            if (elapsed > 0) totalSeconds += elapsed;
+            if (elapsed > 0) {
+                totalSeconds += elapsed;
+                currentSessionCount++;
+                document.getElementById('sessionCount').textContent = currentSessionCount;
+            }
+            
             sessionStartTime = null;
             await supabase.from('profiles').update({
                 total_study_seconds: totalSeconds,
@@ -364,25 +685,48 @@
                 status: '☕ Перерыв',
                 last_seen: new Date().toISOString()
             }).eq('id', currentUser.id);
+            
             updateTimerUI();
             await loadGroupList();
+            await loadLeaderboard();
         }
         
         async function endSession() {
             if (!currentUser) return;
+            
+            let marathonUnlocked = false;
+            
             if (sessionStartTime) {
                 const elapsed = Math.floor((Date.now() - sessionStartTime) / 1000);
-                if (elapsed > 0) totalSeconds += elapsed;
+                if (elapsed > 0) {
+                    totalSeconds += elapsed;
+                    currentSessionCount++;
+                    document.getElementById('sessionCount').textContent = currentSessionCount;
+                    
+                    // Проверка на Марафонца (2 часа = 7200 секунд)
+                    if (elapsed >= 7200) {
+                        await unlockAchievement('marathon');
+                        marathonUnlocked = true;
+                    }
+                    
+                    // Проверка на первый шаг
+                    if (currentSessionCount === 1) {
+                        await unlockAchievement('first_step');
+                    }
+                }
                 sessionStartTime = null;
             }
+            
             await supabase.from('profiles').update({
                 total_study_seconds: totalSeconds,
                 study_session_start: null,
                 status: '🏠 Дома',
                 last_seen: new Date().toISOString()
             }).eq('id', currentUser.id);
+            
             updateTimerUI();
             await loadGroupList();
+            await loadLeaderboard();
         }
         
         // Загрузка списка группы
@@ -417,8 +761,12 @@
                 `;
             }).join('');
             
-            document.getElementById('groupList').innerHTML = html || '<div style="padding: 20px; text-align: center;">Нет участников</div>';
-            document.getElementById('onlineCount').textContent = onlineCount;
+            const groupListEl = document.getElementById('groupList');
+            if (groupListEl) {
+                groupListEl.innerHTML = html || '<div style="padding: 20px; text-align: center;">Нет участников</div>';
+            }
+            const onlineCountEl = document.getElementById('onlineCount');
+            if (onlineCountEl) onlineCountEl.textContent = onlineCount;
         }
         
         // Чат
@@ -430,6 +778,8 @@
                 .limit(100);
             if (error) return;
             const container = document.getElementById('chatMessages');
+            if (!container) return;
+            
             if (!data || data.length === 0) {
                 container.innerHTML = '<div style="text-align: center; color: #94a3b8;">✨ Напишите первое сообщение</div>';
                 return;
@@ -448,15 +798,37 @@
             const input = document.getElementById('chatInput');
             const text = input.value.trim();
             if (!text || !currentUser) return;
+            
             const username = currentUser.user_metadata?.full_name || currentUser.email?.split('@')[0] || 'Пользователь';
+            
+            // Отправляем сообщение
             await supabase.from('messages').insert({
                 user_id: currentUser.id,
                 username: username,
                 message: text,
                 created_at: new Date().toISOString()
             });
+            
+            // Обновляем счетчик сообщений
+            const { data: prof } = await supabase
+                .from('profiles')
+                .select('message_count')
+                .eq('id', currentUser.id)
+                .single();
+            
+            const newCount = (prof?.message_count || 0) + 1;
+            
+            // Обновляем количество сообщений в базе
+            await supabase.from('profiles').update({ message_count: newCount }).eq('id', currentUser.id);
+            
+            // Если сообщений стало 20 — выдаем ачивку
+            if (newCount >= 20) {
+                await unlockAchievement('activist');
+            }
+            
             input.value = '';
             await loadMessages();
+            await updateUserStats();
         }
         
         // Heartbeat
@@ -483,9 +855,9 @@
                 currentUser = user;
                 
                 // Загружаем профиль
-                const { data: profile } = await supabase
+                let { data: profile } = await supabase
                     .from('profiles')
-                    .select('total_study_seconds, study_session_start, status')
+                    .select('total_study_seconds, study_session_start, status, message_count, achievements')
                     .eq('id', user.id)
                     .single();
                 
@@ -502,16 +874,29 @@
                         avatar_url: user.user_metadata?.avatar_url,
                         status: '🏠 Дома',
                         total_study_seconds: 0,
+                        message_count: 0,
+                        achievements: [],
                         last_seen: new Date().toISOString()
                     });
                 }
                 
+                // Проверка на раннюю пташку
+                const currentHour = new Date().getHours();
+                if (currentHour < 8) {
+                    await unlockAchievement('early_bird');
+                }
+                
                 updateTimerUI();
+                await loadAchievements();
+                await updateUserStats();
+                await loadLeaderboard();
                 
                 // Показываем интерфейс
                 document.getElementById('authCard').classList.add('hidden');
                 document.getElementById('appCard').classList.remove('hidden');
                 document.getElementById('groupCard').classList.remove('hidden');
+                document.getElementById('leaderboardCard').classList.remove('hidden');
+                document.getElementById('achievementsCard').classList.remove('hidden');
                 document.getElementById('chatCard').classList.remove('hidden');
                 
                 document.getElementById('userName').textContent = user.user_metadata?.full_name || user.email.split('@')[0];
@@ -530,7 +915,10 @@
                     .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'messages' }, () => loadMessages())
                     .subscribe();
                 
-                setInterval(loadGroupList, 7000);
+                setInterval(() => {
+                    loadGroupList();
+                    loadLeaderboard();
+                }, 7000);
             } else {
                 // Показываем кнопку входа
                 document.getElementById('authContent').innerHTML = `
@@ -539,7 +927,7 @@
                     </button>
                     <p style="margin-top: 20px; text-align: center; color: #64748b;">
                         Войдите, чтобы отслеживать время учёбы,<br>
-                        видеть онлайн-статус группы и общаться в чате.
+                        видеть рейтинг, получать достижения и общаться в чате.
                     </p>
                 `;
                 document.getElementById('googleLoginBtn')?.addEventListener('click', async () => {
@@ -567,12 +955,11 @@
         
         // Следим за изменением auth состояния
         supabase.auth.onAuthStateChange((event) => {
-    if (event === 'SIGNED_OUT') {
-        location.reload(); // При выходе перезагрузить страницу — это нормально
-    } else if (event === 'SIGNED_IN') {
-        // Убираем location.reload(), чтобы не было бесконечного цикла!
-        init(); 
-    }
+            if (event === 'SIGNED_OUT') {
+                location.reload();
+            } else if (event === 'SIGNED_IN') {
+                init();
+            }
         });
         
         init();
